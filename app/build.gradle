@@ -5,6 +5,9 @@ plugins {
     id 'kotlin-kapt'
 }
 
+// чтобы ktlint использовать
+apply from: "../ktlint.gradle"
+
 android {
     namespace 'ru.internetcloud.wereami'
     compileSdk 33
