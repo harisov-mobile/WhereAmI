@@ -21,13 +21,6 @@ class MapFragment : Fragment() {
 
     private lateinit var locationOverlay: MyLocationNewOverlay
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
-        Configuration.getInstance().osmdroidBasePath = requireActivity().filesDir
-    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         _binding = FragmentMapBinding.inflate(inflater, container, false)
         return binding.root
@@ -41,7 +34,12 @@ class MapFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupClickListeners()
+
         val startPoint = GeoPoint(56.11716, 47.4937205)
+
+        Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
+        Configuration.getInstance().osmdroidBasePath = requireActivity().filesDir
 
         // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
         binding.mapview.setTileSource(TileSourceFactory.MAPNIK)
@@ -53,5 +51,11 @@ class MapFragment : Fragment() {
         binding.mapview.setMultiTouchControls(true)
         binding.mapview.overlays.add(RotationGestureOverlay(binding.mapview))
 
+    }
+
+    private fun setupClickListeners() {
+        binding.floatingActionButton.setOnClickListener {
+
+        }
     }
 }

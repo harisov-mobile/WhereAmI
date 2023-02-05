@@ -42,6 +42,13 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
                 val startFragment = MapFragment()
                 showFragment(fragment = startFragment, withBackStack = false)
             }
+        } else {
+            setContentView(binding.root)
+            val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+            if (currentFragment == null) {
+                val startFragment = MapFragment()
+                showFragment(fragment = startFragment, withBackStack = false)
+            }
         }
     }
 
@@ -98,4 +105,5 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
             }
         }
     }
+
 }
