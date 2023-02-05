@@ -1,15 +1,12 @@
 package ru.internetcloud.wereami
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import com.google.android.material.snackbar.Snackbar
+import androidx.fragment.app.Fragment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -17,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.internetcloud.wereami.databinding.ActivityMainBinding
 import ru.internetcloud.wereami.domain.LocationPermissionRepository
+import ru.internetcloud.wereami.presentation.map.MapFragment
 
 class MainActivity : AppCompatActivity(), LocationPermissionRepository {
 
@@ -34,17 +32,35 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.splash_screen)
 
-        scope.launch {
-            delay(5000)
-            setContentView(binding.root)
+        if (savedInstanceState == null) {
+            setContentView(R.layout.splash_screen)
+
+            scope.launch {
+                delay(2000)
+                setContentView(binding.root)
+                val startFragment = MapFragment()
+                showFragment(fragment = startFragment, withBackStack = false)
+            }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         scope.cancel()
+    }
+
+    private fun showFragment(fragment: Fragment, withBackStack: Boolean) {
+        val transaction = supportFragmentManager.beginTransaction()
+
+        if (withBackStack) {
+            transaction.replace(R.id.fragment_container, fragment)
+                .addToBackStack(null)
+                .commit()
+        } else {
+            transaction.add(R.id.fragment_container, fragment)
+                .commit()
+        }
     }
 
     override fun isLocationPermissionGranted(): Boolean {
@@ -82,7 +98,4 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
             }
         }
     }
-
 }
-
-
