@@ -4,6 +4,8 @@ buildscript {
         daggerVersion = "2.40.1"
         roomVersion = "2.4.2"
         lifecycleVersion = "2.5.1"
+        geoOsmdroidVersion = "6.1.14"
+        geoOsmbonusVersion = "6.9.0"
     }
 }
 

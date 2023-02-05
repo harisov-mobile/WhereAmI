@@ -63,4 +63,9 @@ dependencies {
 
     // для viewModelScope
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
+
+    // Osmdroid
+    implementation "org.osmdroid:osmdroid-android:$geoOsmdroidVersion"
+    implementation "com.github.MKergall:osmbonuspack:$geoOsmbonusVersion"
+
 }
