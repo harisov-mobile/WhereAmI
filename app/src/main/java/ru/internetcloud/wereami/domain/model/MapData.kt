@@ -4,7 +4,6 @@ import org.osmdroid.util.GeoPoint
 
 data class MapData(
     var mapCenter: GeoPoint,
-    var zoomLevel: Double,
-    var needToAsk: Boolean = false
+    var zoomLevel: Double
 )
 

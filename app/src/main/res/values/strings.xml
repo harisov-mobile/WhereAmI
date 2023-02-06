@@ -2,4 +2,11 @@
     <string name="app_name">Were Am I</string>
     <string name="splash_title">Where Am I?</string>
     <string name="show_my_current_location_on_map">Show my current location on the map</string>
+
+    <string name="ok_button">Ok</string>
+    <string name="yes_button">Yes</string>
+    <string name="no_button">No</string>
+
+    <string name="offer_to_open_settings">Для того, чтобы использовать эту функцию, необходимо открыть доступ к местоположению в настройках приложения. Открыть настройки?</string>
+
 </resources>

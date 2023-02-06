@@ -1,7 +1,10 @@
 package ru.internetcloud.wereami.presentation.map
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -9,9 +12,9 @@ import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -26,8 +29,9 @@ import ru.internetcloud.wereami.di.ApplicationComponent
 import ru.internetcloud.wereami.di.ViewModelFactory
 import ru.internetcloud.wereami.domain.LocationPermissionRepository
 import ru.internetcloud.wereami.domain.model.MapData
+import ru.internetcloud.wereami.presentation.dialog.QuestionDialogFragment
 
-class MapFragment : Fragment() {
+class MapFragment : Fragment(), FragmentResultListener {
 
     @Inject
     lateinit var viewModelFactory: ViewModelFactory
@@ -46,10 +50,13 @@ class MapFragment : Fragment() {
 
     private var locationPermissionRepository: LocationPermissionRepository? = null
 
-    private lateinit var locationOverlay: MyLocationNewOverlay
+    private var locationOverlay: MyLocationNewOverlay? = null
 
     companion object {
         private const val ZOOM_LEVEL = 17.8
+
+        private val REQUEST_OPEN_SETTINGS_KEY = "open_settings_key"
+        private val ARG_ANSWER = "arg_answer"
     }
 
     override fun onAttach(context: Context) {
@@ -75,16 +82,17 @@ class MapFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
 
-        Log.i("rustam", "onDestroyView")
-
         val currentMapCenter = binding.mapview.getMapCenter()
 
         // в конструкторе GeoPoint надо наоборот передавать параметры:
         val geoPoint = GeoPoint(currentMapCenter.latitude, currentMapCenter.longitude)
         mapViewModel.setMapCenter(geoPoint)
         mapViewModel.setZoomLevel(binding.mapview.zoomLevelDouble)
-        _binding = null
 
+        locationOverlay?.let { currentLocationOverlay ->
+            mapViewModel.setEnableFollowLocation(currentLocationOverlay.isFollowLocationEnabled)
+        }
+        _binding = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -92,56 +100,79 @@ class MapFragment : Fragment() {
 
         setupClickListeners()
         observeViewModel()
+        subscribeChilds()
+    }
+
+    private fun subscribeChilds() {
+        // (диалоговое окно - "Открыть настройки?")
+        childFragmentManager.setFragmentResultListener(REQUEST_OPEN_SETTINGS_KEY, viewLifecycleOwner, this)
     }
 
     private fun observeViewModel() {
-        mapViewModel.currentMapData.observe(viewLifecycleOwner) { mapData ->
-            updateUI(mapData)
+        mapViewModel.mapStateLiveData.observe(viewLifecycleOwner) { mapState ->
+            updateUI(mapState)
         }
     }
 
-    private fun updateUI(mapData: MapData) {
+    private fun updateUI(mapState: MapState) {
         Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
         Configuration.getInstance().osmdroidBasePath = requireActivity().filesDir
 
         // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
         binding.mapview.setTileSource(TileSourceFactory.MAPNIK)
-        binding.mapview.controller.setZoom(mapData.zoomLevel)
-        binding.mapview.controller.setCenter(mapData.mapCenter)
+        binding.mapview.controller.setZoom(mapState.mapData.zoomLevel)
+        binding.mapview.controller.setCenter(mapState.mapData.mapCenter)
 
         // приближение жестами: на эмуляторе зажать CTRL + зажать левую кнопку мыши
         // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-enable-rotation-gestures
         binding.mapview.setMultiTouchControls(true)
         binding.mapview.overlays.add(RotationGestureOverlay(binding.mapview))
 
-        locationPermissionRepository?.let { currentLocationPermissionRepository ->
-            if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
-                showMyLocation()
-            } else {
-                if (mapData.needToAsk) {
-                    mapViewModel.setNeedToAsk(false)
+        if (mapState.isFirstTime) {
+            mapViewModel.setIsFirstTime(false)
+            locationPermissionRepository?.let { currentLocationPermissionRepository ->
+                if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
+                    mapViewModel.setEnableFollowLocation(true)
+                    showMyLocation(enableFollowLocation = true, ZOOM_LEVEL) // в первый раз чтобы масштаб крупный был
+                } else {
                     currentLocationPermissionRepository.requestLocationPermission {
-                        showMyLocation()
+                        // коллбек выполнится если пользователь даст разрешение
+                        mapViewModel.setEnableFollowLocation(true)
+                        showMyLocation(enableFollowLocation = true, ZOOM_LEVEL)
                     }
+                }
+            }
+        } else {
+            locationPermissionRepository?.let { currentLocationPermissionRepository ->
+                if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
+                    val enableFollowLocation = mapViewModel.mapStateLiveData.value?.enableFollowLocation ?: false
+                    showMyLocation(enableFollowLocation)
                 }
             }
         }
     }
 
-    private fun showMyLocation() {
+    private fun showMyLocation(enableFollowLocation: Boolean, requiredZoom: Double? = null) {
         // преобразование в bitmap:
-        val bitmapIcon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_man_yellow_with_border_red)!!.toBitmap()
+        val bitmapIcon =
+            ContextCompat.getDrawable(requireContext(), R.drawable.ic_man_yellow_with_border_red)!!.toBitmap()
 
         // получение геолокации пользователя:
         // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-add-the-my-location-overlay
-        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview)
-        locationOverlay.enableMyLocation()
-        locationOverlay.setPersonIcon(bitmapIcon)
-        locationOverlay.setDirectionIcon(bitmapIcon) // замена белой стрелки
-        locationOverlay.enableFollowLocation()
-        if (binding.mapview.zoomLevelDouble < ZOOM_LEVEL) {
-            binding.mapview.controller.setZoom(ZOOM_LEVEL)
+        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
+            this.enableMyLocation()
+            this.setPersonIcon(bitmapIcon)
+            this.setDirectionIcon(bitmapIcon) // замена белой стрелки
+
+            if (enableFollowLocation) {
+                this.enableFollowLocation()
+            }
         }
+
+        requiredZoom?.let { zoom ->
+            binding.mapview.controller.setZoom(zoom)
+        }
+
         binding.mapview.overlays.add(locationOverlay)
     }
 
@@ -154,23 +185,48 @@ class MapFragment : Fragment() {
     private fun showCurrentLocation() {
         locationPermissionRepository?.let { currentLocationPermissionRepository ->
             if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
-                locationOverlay.enableFollowLocation()
-            } else {
-                mapViewModel.currentMapData.value?.let { mapData ->
-                    if (mapData.needToAsk) {
-                        mapViewModel.setNeedToAsk(false)
-                        currentLocationPermissionRepository.requestLocationPermission {
-                            showMyLocation()
-                        }
-                    }
+                mapViewModel.setEnableFollowLocation(true)
+                locationOverlay?.let {
+                    it.enableFollowLocation()
+                } ?: let {
+                    showMyLocation(enableFollowLocation = true)
                 }
+            } else {
+                // открываю диалог с предложением открыть настройки приложения
+                QuestionDialogFragment
+                    .newInstance(
+                        getString(R.string.offer_to_open_settings),
+                        REQUEST_OPEN_SETTINGS_KEY,
+                        ARG_ANSWER
+                    )
+                    .show(childFragmentManager, REQUEST_OPEN_SETTINGS_KEY)
             }
         }
 
     }
 
-    override fun onStop() {
-        super.onStop()
-        Log.i("rustam", "onStop")
+    override fun onFragmentResult(requestKey: String, result: Bundle) {
+        // когда из диалогового окна прилетит ответ:
+        when (requestKey) {
+            // ответ на вопрос: "Записать данные?"
+            REQUEST_OPEN_SETTINGS_KEY -> {
+                val openSettings: Boolean = result.getBoolean(ARG_ANSWER, false)
+                if (openSettings) {
+                    // запустить экран, который приведет пользователя в настройки:
+                    val settingsIntent = Intent()
+                    settingsIntent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                    val myApplicaionUri = Uri.fromParts(
+                        "package",
+                        BuildConfig.APPLICATION_ID,
+                        null
+                    )
+                    settingsIntent.data = myApplicaionUri
+                    settingsIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(settingsIntent)
+                }
+            }
+
+        }
     }
+
 }

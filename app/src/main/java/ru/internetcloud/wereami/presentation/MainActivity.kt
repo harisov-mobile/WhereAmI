@@ -88,8 +88,6 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        Log.d("rustam", "onRequestPermissionResult")
-
         when (requestCode) {
             PERMISSIONS_REQUEST_CODE -> {
                 when {

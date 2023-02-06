@@ -5,10 +5,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import javax.inject.Inject
 import org.osmdroid.util.GeoPoint
-import ru.internetcloud.wereami.data.repository.MapRepositoryImpl
-import ru.internetcloud.wereami.domain.MapRepository
-import ru.internetcloud.wereami.domain.model.MapData
-import ru.internetcloud.wereami.domain.usecase.GetLocationPermissionUseCase
 import ru.internetcloud.wereami.domain.usecase.GetMapDataUseCase
 import ru.internetcloud.wereami.domain.usecase.SaveMapDataUseCase
 
@@ -17,32 +13,35 @@ class MapViewModel @Inject constructor(
     private val saveMapDataUseCase: SaveMapDataUseCase
 ) : ViewModel() {
 
-    private val _currentMapData = MutableLiveData<MapData>()
-    val currentMapData: LiveData<MapData>
-        get() = _currentMapData
+    private val _mapStateLiveData = MutableLiveData<MapState>()
+    val mapStateLiveData: LiveData<MapState>
+        get() = _mapStateLiveData
 
     init {
-        var mapData = getMapDataUseCase.getMapData()
-        mapData.needToAsk = true
-        _currentMapData.value = mapData
+        val mapData = getMapDataUseCase.getMapData()
+        _mapStateLiveData.value = MapState(mapData = mapData, isFirstTime = true, enableFollowLocation = false)
     }
 
     fun setMapCenter(geoPoint: GeoPoint) {
-       _currentMapData.value?.mapCenter = geoPoint
+        _mapStateLiveData.value?.mapData?.mapCenter = geoPoint
     }
 
     fun setZoomLevel(zoomLevel: Double) {
-        _currentMapData.value?.zoomLevel = zoomLevel
+        _mapStateLiveData.value?.mapData?.zoomLevel = zoomLevel
     }
 
-    fun setNeedToAsk(needToAsk: Boolean) {
-        _currentMapData.value?.needToAsk = needToAsk
+    fun setIsFirstTime(value: Boolean) {
+        _mapStateLiveData.value?.isFirstTime = value
+    }
+
+    fun setEnableFollowLocation(value: Boolean) {
+        _mapStateLiveData.value?.enableFollowLocation = value
     }
 
     override fun onCleared() {
         super.onCleared()
-        _currentMapData.value?.let { mapData ->
-            saveMapDataUseCase.saveMapData(mapData)
+        _mapStateLiveData.value?.let { mapState ->
+            saveMapDataUseCase.saveMapData(mapState.mapData)
         }
     }
 
