@@ -9,11 +9,11 @@ plugins {
 apply from: "../ktlint.gradle"
 
 android {
-    namespace 'ru.internetcloud.wereami'
+    namespace 'ru.internetcloud.whereami'
     compileSdk 33
 
     defaultConfig {
-        applicationId "ru.internetcloud.wereami"
+        applicationId "ru.internetcloud.whereami"
         minSdk 21
         targetSdk 33
         versionCode 1
