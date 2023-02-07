@@ -17,6 +17,8 @@ import javax.inject.Inject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.compass.CompassOverlay
+import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
@@ -28,6 +30,7 @@ import ru.internetcloud.whereami.di.ApplicationComponent
 import ru.internetcloud.whereami.di.ViewModelFactory
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.dialog.QuestionDialogFragment
+
 
 class MapFragment : Fragment(), FragmentResultListener {
 
@@ -101,6 +104,16 @@ class MapFragment : Fragment(), FragmentResultListener {
         subscribeChilds()
     }
 
+    override fun onResume() {
+        super.onResume()
+        binding.mapview.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        binding.mapview.onPause()
+    }
+
     private fun subscribeChilds() {
         // (диалоговое окно - "Открыть настройки?")
         childFragmentManager.setFragmentResultListener(REQUEST_OPEN_SETTINGS_KEY, viewLifecycleOwner, this)
@@ -125,6 +138,11 @@ class MapFragment : Fragment(), FragmentResultListener {
         // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-enable-rotation-gestures
         binding.mapview.setMultiTouchControls(true)
         binding.mapview.overlays.add(RotationGestureOverlay(binding.mapview))
+
+        // Компас
+        val compassOverlay = CompassOverlay(context, InternalCompassOrientationProvider(context), binding.mapview)
+        compassOverlay.enableCompass()
+        binding.mapview.overlays.add(compassOverlay)
 
         if (mapState.isFirstTime) {
             mapViewModel.setIsFirstTime(false)
