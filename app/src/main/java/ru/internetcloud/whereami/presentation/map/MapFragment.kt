@@ -14,10 +14,14 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentResultListener
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.snackbar.Snackbar
 import javax.inject.Inject
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.MapEventsOverlay
+import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.ScaleBarOverlay
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
@@ -128,107 +132,13 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun updateUI(mapState: MapState) {
-        Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
-        Configuration.getInstance().osmdroidBasePath = requireActivity().filesDir
-
-        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
-        binding.mapview.setTileSource(TileSourceFactory.MAPNIK)
-        binding.mapview.controller.setZoom(mapState.mapData.zoomLevel)
-        binding.mapview.controller.setCenter(mapState.mapData.mapCenter)
-
-        // приближение жестами: на эмуляторе зажать CTRL + зажать левую кнопку мыши
-        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-enable-rotation-gestures
-        binding.mapview.setMultiTouchControls(true)
-        binding.mapview.overlays.add(RotationGestureOverlay(binding.mapview))
-
-        // Компас
-        val compassOverlay = CompassOverlay(context, InternalCompassOrientationProvider(context), binding.mapview)
-        compassOverlay.enableCompass()
-        binding.mapview.overlays.add(compassOverlay)
-
-        // Шкала
-        val dm : DisplayMetrics = requireActivity().resources.displayMetrics
-        val scaleBarOverlay = ScaleBarOverlay(binding.mapview)
-        scaleBarOverlay.setCentred(true)
-        //play around with these values to get the location on screen in the right place for your application
-        scaleBarOverlay.setScaleBarOffset(dm.widthPixels / 2, 10)
-        binding.mapview.overlays.add(scaleBarOverlay)
-
-        if (mapState.isFirstTime) {
-            mapViewModel.setIsFirstTime(false)
-            locationPermissionRepository?.let { currentLocationPermissionRepository ->
-                if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
-                    mapViewModel.setEnableFollowLocation(true)
-                    showMyLocation(enableFollowLocation = true, ZOOM_LEVEL) // в первый раз чтобы масштаб крупный был
-                } else {
-                    currentLocationPermissionRepository.requestLocationPermission {
-                        // коллбек выполнится если пользователь даст разрешение
-                        mapViewModel.setEnableFollowLocation(true)
-                        showMyLocation(enableFollowLocation = true, ZOOM_LEVEL)
-                    }
-                }
-            }
-        } else {
-            locationPermissionRepository?.let { currentLocationPermissionRepository ->
-                if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
-                    val enableFollowLocation = mapViewModel.mapStateLiveData.value?.enableFollowLocation ?: false
-                    showMyLocation(enableFollowLocation)
-                }
-            }
-        }
-    }
-
-    private fun showMyLocation(enableFollowLocation: Boolean, requiredZoom: Double? = null) {
-        // преобразование в bitmap:
-        val bitmapIcon =
-            ContextCompat.getDrawable(requireContext(), R.drawable.ic_man_yellow_with_border_red)!!.toBitmap()
-
-        // получение геолокации пользователя:
-        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-add-the-my-location-overlay
-        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
-            this.enableMyLocation()
-            this.setPersonIcon(bitmapIcon)
-            this.setDirectionIcon(bitmapIcon) // замена белой стрелки
-
-            if (enableFollowLocation) {
-                this.enableFollowLocation()
-            }
-        }
-
-        requiredZoom?.let { zoom ->
-            binding.mapview.controller.setZoom(zoom)
-        }
-
-        binding.mapview.overlays.add(locationOverlay)
+        showMap(mapState)
     }
 
     private fun setupClickListeners() {
         binding.floatingActionButton.setOnClickListener {
-            showCurrentLocation()
+            moveToCurrentLocation()
         }
-    }
-
-    private fun showCurrentLocation() {
-        locationPermissionRepository?.let { currentLocationPermissionRepository ->
-            if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
-                mapViewModel.setEnableFollowLocation(true)
-                locationOverlay?.let {
-                    it.enableFollowLocation()
-                } ?: let {
-                    showMyLocation(enableFollowLocation = true)
-                }
-            } else {
-                // открываю диалог с предложением открыть настройки приложения
-                QuestionDialogFragment
-                    .newInstance(
-                        getString(R.string.offer_to_open_settings),
-                        REQUEST_OPEN_SETTINGS_KEY,
-                        ARG_ANSWER
-                    )
-                    .show(childFragmentManager, REQUEST_OPEN_SETTINGS_KEY)
-            }
-        }
-
     }
 
     override fun onFragmentResult(requestKey: String, result: Bundle) {
@@ -255,4 +165,178 @@ class MapFragment : Fragment(), FragmentResultListener {
         }
     }
 
+    private fun setMarker(geoPoint: GeoPoint, markerTitle: String) {
+        val marker = Marker(binding.mapview).apply {
+            position = geoPoint
+            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_marker)
+            title = markerTitle
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            setOnMarkerClickListener { currentMarker, mapView ->
+                //buildRoute(currentMarker)
+
+                val snackBar = Snackbar.make(
+                    binding.root,
+                    markerTitle,
+                    Snackbar.LENGTH_INDEFINITE
+                )
+                snackBar.setAction("OK") {
+                    snackBar.dismiss()
+                } // если не исчезает - вызови dismiss()
+                snackBar.show()
+
+                true
+            }
+        }
+        // polylineMap.put(marker, null)
+
+        binding.mapview.overlays.add(marker)
+        binding.mapview.invalidate()
+        mapViewModel.setMarker(marker)
+    }
+
+    private fun showMap(mapState: MapState) {
+        initMap(mapState)
+        setGestures()
+        setCompas()
+        setScale()
+        setMapClickListener(mapState)
+        showLocation(mapState)
+        showMarker(mapState.marker)
+    }
+
+    private fun initMap(mapState: MapState) {
+        Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
+        Configuration.getInstance().osmdroidBasePath = requireActivity().filesDir
+
+        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
+        binding.mapview.setTileSource(TileSourceFactory.MAPNIK)
+        binding.mapview.controller.setZoom(mapState.mapData.zoomLevel)
+        binding.mapview.controller.setCenter(mapState.mapData.mapCenter)
+    }
+
+    private fun setCompas() {
+        // Компас
+        val compassOverlay = CompassOverlay(context, InternalCompassOrientationProvider(context), binding.mapview)
+        compassOverlay.enableCompass()
+        binding.mapview.overlays.add(compassOverlay)
+    }
+
+    private fun setScale() {
+        // Шкала
+        val dm: DisplayMetrics = requireActivity().resources.displayMetrics
+        val scaleBarOverlay = ScaleBarOverlay(binding.mapview)
+        scaleBarOverlay.setCentred(true)
+        //play around with these values to get the location on screen in the right place for your application
+        scaleBarOverlay.setScaleBarOffset(dm.widthPixels / 2, 10)
+        binding.mapview.overlays.add(scaleBarOverlay)
+    }
+
+    private fun setGestures() {
+        // приближение жестами: на эмуляторе зажать CTRL + зажать левую кнопку мыши
+        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-enable-rotation-gestures
+        binding.mapview.setMultiTouchControls(true)
+        binding.mapview.overlays.add(RotationGestureOverlay(binding.mapview))
+    }
+
+    private fun setMapClickListener(mapState: MapState) {
+        // Click listener
+        val mapEventsReceiver = object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                mapState.marker?.let { currentMarker ->
+                    binding.mapview.overlays.remove(currentMarker)
+                }
+                p?.let { geoPoint ->
+                    val markerTitle = "МАРКЕР"
+                    setMarker(geoPoint, markerTitle)
+                }
+                return true
+            }
+
+            override fun longPressHelper(p: GeoPoint?): Boolean {
+                return true
+            }
+        }
+        val mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
+        binding.mapview.overlays.add(mapEventsOverlay)
+    }
+
+    private fun showLocation(mapState: MapState) {
+        if (mapState.isFirstTime) {
+            mapViewModel.setIsFirstTime(false)
+            locationPermissionRepository?.let { currentLocationPermissionRepository ->
+                if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
+                    mapViewModel.setEnableFollowLocation(true)
+                    showCurrentLocation(
+                        enableFollowLocation = true,
+                        ZOOM_LEVEL
+                    ) // в первый раз чтобы масштаб крупный был
+                } else {
+                    currentLocationPermissionRepository.requestLocationPermission {
+                        // коллбек выполнится если пользователь даст разрешение
+                        mapViewModel.setEnableFollowLocation(true)
+                        showCurrentLocation(enableFollowLocation = true, ZOOM_LEVEL)
+                    }
+                }
+            }
+        } else {
+            locationPermissionRepository?.let { currentLocationPermissionRepository ->
+                if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
+                    val enableFollowLocation = mapViewModel.mapStateLiveData.value?.enableFollowLocation ?: false
+                    showCurrentLocation(enableFollowLocation)
+                }
+            }
+        }
+    }
+
+    private fun showCurrentLocation(enableFollowLocation: Boolean, requiredZoom: Double? = null) {
+        // преобразование в bitmap:
+        val bitmapIcon =
+            ContextCompat.getDrawable(requireContext(), R.drawable.ic_man_yellow_with_border_red)!!.toBitmap()
+
+        // получение геолокации пользователя:
+        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-add-the-my-location-overlay
+        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
+            this.enableMyLocation()
+            this.setPersonIcon(bitmapIcon)
+            this.setDirectionIcon(bitmapIcon) // замена белой стрелки
+
+            if (enableFollowLocation) {
+                this.enableFollowLocation()
+            }
+        }
+
+        requiredZoom?.let { zoom ->
+            binding.mapview.controller.setZoom(zoom)
+        }
+
+        binding.mapview.overlays.add(locationOverlay)
+    }
+
+    private fun moveToCurrentLocation() {
+        locationPermissionRepository?.let { currentLocationPermissionRepository ->
+            if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
+                mapViewModel.setEnableFollowLocation(true)
+                locationOverlay?.let {
+                    it.enableFollowLocation()
+                } ?: let {
+                    showCurrentLocation(enableFollowLocation = true)
+                }
+            } else {
+                // открываю диалог с предложением открыть настройки приложения
+                QuestionDialogFragment
+                    .newInstance(
+                        getString(R.string.offer_to_open_settings),
+                        REQUEST_OPEN_SETTINGS_KEY,
+                        ARG_ANSWER
+                    )
+                    .show(childFragmentManager, REQUEST_OPEN_SETTINGS_KEY)
+            }
+        }
+    }
+
+    private fun showMarker(currentMarker: Marker?) {
+        currentMarker?.let {
+            setMarker(it.position, it.title)
+        }
+    }
 }
