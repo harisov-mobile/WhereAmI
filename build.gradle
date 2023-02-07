@@ -6,6 +6,7 @@ buildscript {
         lifecycleVersion = "2.5.1"
         geoOsmdroidVersion = "6.1.14"
         geoOsmbonusVersion = "6.9.0"
+        fragmentVersion = "1.5.5"
     }
 }
 

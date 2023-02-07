@@ -1,4 +1,4 @@
-package ru.internetcloud.wereami
+package ru.internetcloud.wereami.presentation
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import ru.internetcloud.wereami.R
 import ru.internetcloud.wereami.databinding.ActivityMainBinding
 import ru.internetcloud.wereami.domain.LocationPermissionRepository
 import ru.internetcloud.wereami.presentation.map.MapFragment
@@ -86,8 +87,6 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        Log.d("rustam", "onRequestPermissionResult")
 
         when (requestCode) {
             PERMISSIONS_REQUEST_CODE -> {

@@ -68,4 +68,6 @@ dependencies {
     implementation "org.osmdroid:osmdroid-android:$geoOsmdroidVersion"
     implementation "com.github.MKergall:osmbonuspack:$geoOsmbonusVersion"
 
+    // для передачи данных между фрагментами
+    implementation "androidx.fragment:fragment-ktx:$fragmentVersion"
 }
