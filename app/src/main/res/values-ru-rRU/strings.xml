@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Где я?</string>
+    <string name="show_my_current_location_on_map">Показать мое текущее местоположение на карте</string>
+    <string name="ok_button">ОК</string>
+    <string name="yes_button">Да</string>
+    <string name="no_button">Нет</string>
+    <string name="offer_to_open_settings">Для того, чтобы использовать эту функцию, необходимо открыть доступ к местоположению в настройках приложения. Открыть настройки?</string>
+    <string name="splash_title">Где я?</string>
+</resources>
