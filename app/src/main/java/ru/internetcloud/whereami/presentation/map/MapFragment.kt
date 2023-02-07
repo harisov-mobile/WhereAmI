@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.util.DisplayMetrics
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,6 +18,7 @@ import javax.inject.Inject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.ScaleBarOverlay
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay
@@ -143,6 +145,14 @@ class MapFragment : Fragment(), FragmentResultListener {
         val compassOverlay = CompassOverlay(context, InternalCompassOrientationProvider(context), binding.mapview)
         compassOverlay.enableCompass()
         binding.mapview.overlays.add(compassOverlay)
+
+        // Шкала
+        val dm : DisplayMetrics = requireActivity().resources.displayMetrics
+        val scaleBarOverlay = ScaleBarOverlay(binding.mapview)
+        scaleBarOverlay.setCentred(true)
+        //play around with these values to get the location on screen in the right place for your application
+        scaleBarOverlay.setScaleBarOffset(dm.widthPixels / 2, 10)
+        binding.mapview.overlays.add(scaleBarOverlay)
 
         if (mapState.isFirstTime) {
             mapViewModel.setIsFirstTime(false)
