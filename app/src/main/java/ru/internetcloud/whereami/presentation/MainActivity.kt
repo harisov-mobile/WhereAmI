@@ -2,6 +2,7 @@ package ru.internetcloud.whereami.presentation
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -108,4 +109,9 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
         }
     }
 
+    override fun isLocationEnabled(): Boolean {
+        val locationManager: LocationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+            locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
 }

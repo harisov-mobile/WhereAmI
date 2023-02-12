@@ -3,11 +3,11 @@ package ru.internetcloud.whereami.presentation.map
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import javax.inject.Inject
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
 import ru.internetcloud.whereami.domain.usecase.GetMapDataUseCase
 import ru.internetcloud.whereami.domain.usecase.SaveMapDataUseCase
+import javax.inject.Inject
 
 class MapViewModel @Inject constructor(
     getMapDataUseCase: GetMapDataUseCase,
@@ -39,6 +39,10 @@ class MapViewModel @Inject constructor(
         _mapStateLiveData.value?.enableFollowLocation = value
     }
 
+    fun setShowLocationNotEnabled(value: Boolean) {
+        _mapStateLiveData.value?.showLocationNotEnabled = value
+    }
+
     fun setMarker(marker: Marker) {
         _mapStateLiveData.value?.marker = marker
     }
@@ -49,6 +53,4 @@ class MapViewModel @Inject constructor(
             saveMapDataUseCase.saveMapData(mapState.mapData)
         }
     }
-
 }
-

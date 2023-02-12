@@ -15,7 +15,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.snackbar.Snackbar
-import javax.inject.Inject
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -36,7 +35,7 @@ import ru.internetcloud.whereami.di.ApplicationComponent
 import ru.internetcloud.whereami.di.ViewModelFactory
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.dialog.QuestionDialogFragment
-
+import javax.inject.Inject
 
 class MapFragment : Fragment(), FragmentResultListener {
 
@@ -173,7 +172,7 @@ class MapFragment : Fragment(), FragmentResultListener {
             title = markerTitle
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
             setOnMarkerClickListener { currentMarker, mapView ->
-                //buildRoute(currentMarker)
+                // buildRoute(currentMarker)
 
                 val snackBar = Snackbar.make(
                     binding.root,
@@ -234,7 +233,7 @@ class MapFragment : Fragment(), FragmentResultListener {
         val dm: DisplayMetrics = requireActivity().resources.displayMetrics
         val scaleBarOverlay = ScaleBarOverlay(binding.mapview)
         scaleBarOverlay.setCentred(true)
-        //play around with these values to get the location on screen in the right place for your application
+        // play around with these values to get the location on screen in the right place for your application
         scaleBarOverlay.setScaleBarOffset(dm.widthPixels / 2, 10)
         binding.mapview.overlays.add(scaleBarOverlay)
     }
@@ -269,15 +268,22 @@ class MapFragment : Fragment(), FragmentResultListener {
             locationPermissionRepository?.let { currentLocationPermissionRepository ->
                 if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
                     mapViewModel.setEnableFollowLocation(true)
+                    mapViewModel.setShowLocationNotEnabled(true)
                     showCurrentLocation(
                         enableFollowLocation = true,
+                        showLocationNotEnabled = true,
                         ZOOM_LEVEL
                     ) // в первый раз чтобы масштаб крупный был
                 } else {
                     currentLocationPermissionRepository.requestLocationPermission {
                         // коллбек выполнится если пользователь даст разрешение
                         mapViewModel.setEnableFollowLocation(true)
-                        showCurrentLocation(enableFollowLocation = true, ZOOM_LEVEL)
+                        mapViewModel.setEnableFollowLocation(true)
+                        showCurrentLocation(
+                            enableFollowLocation = true,
+                            showLocationNotEnabled = true,
+                            ZOOM_LEVEL
+                        ) // в первый раз чтобы масштаб крупный был
                     }
                 }
             }
@@ -285,45 +291,81 @@ class MapFragment : Fragment(), FragmentResultListener {
             locationPermissionRepository?.let { currentLocationPermissionRepository ->
                 if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
                     val enableFollowLocation = mapViewModel.mapStateLiveData.value?.enableFollowLocation ?: false
-                    showCurrentLocation(enableFollowLocation)
+                    val showLocationNotEnabled = mapViewModel.mapStateLiveData.value?.showLocationNotEnabled ?: false
+                    showCurrentLocation(
+                        enableFollowLocation = enableFollowLocation,
+                        showLocationNotEnabled = showLocationNotEnabled
+                    )
                 }
             }
         }
     }
 
-    private fun showCurrentLocation(enableFollowLocation: Boolean, requiredZoom: Double? = null) {
-        // преобразование в bitmap:
-        val bitmapIcon =
-            ContextCompat.getDrawable(requireContext(), R.drawable.ic_man_yellow_with_border_red)!!.toBitmap()
+    private fun showCurrentLocation(
+        enableFollowLocation: Boolean,
+        showLocationNotEnabled: Boolean,
+        requiredZoom: Double? = null
+    ) {
+        locationPermissionRepository?.let { currentLocationPermissionRepository ->
+            if (currentLocationPermissionRepository.isLocationEnabled()) {
+                locationOverlay?.enableFollowLocation() ?: let {
+                    // преобразование в bitmap:
+                    val bitmapIcon =
+                        ContextCompat.getDrawable(requireContext(), R.drawable.ic_man_yellow_with_border_red)!!
+                            .toBitmap()
 
-        // получение геолокации пользователя:
-        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-add-the-my-location-overlay
-        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
-            this.enableMyLocation()
-            this.setPersonIcon(bitmapIcon)
-            this.setDirectionIcon(bitmapIcon) // замена белой стрелки на человечка желтого с красной каемочкой
+                    // получение геолокации пользователя:
+                    // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-add-the-my-location-overlay
+                    locationOverlay =
+                        MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
+                            this.enableMyLocation()
+                            this.setPersonIcon(bitmapIcon)
+                            this.setDirectionIcon(bitmapIcon) // замена белой стрелки на человечка желтого с красной каемочкой
 
-            if (enableFollowLocation) {
-                this.enableFollowLocation()
+                            if (enableFollowLocation) {
+                                this.enableFollowLocation()
+                            }
+                        }
+
+                    requiredZoom?.let { zoom ->
+                        binding.mapview.controller.setZoom(zoom)
+                    }
+
+                    binding.mapview.overlays.add(locationOverlay)
+                }
+            } else {
+                locationOverlay?.let { currentLocationOverlay ->
+                    binding.mapview.overlays.remove(currentLocationOverlay)
+                    binding.mapview.invalidate()
+                    locationOverlay = null
+                }
+
+                mapViewModel.setEnableFollowLocation(false)
+
+                if (showLocationNotEnabled) {
+                    val snackBar = Snackbar.make(
+                        binding.root,
+                        R.string.location_is_not_enabled,
+                        Snackbar.LENGTH_INDEFINITE
+                    )
+                    snackBar.setAction("OK") {
+                        snackBar.dismiss()
+                    } // если не исчезает - вызови dismiss()
+                    snackBar.show()
+                    mapViewModel.setShowLocationNotEnabled(false)
+                } else {
+                    // Ничего не делаю
+                }
             }
         }
-
-        requiredZoom?.let { zoom ->
-            binding.mapview.controller.setZoom(zoom)
-        }
-
-        binding.mapview.overlays.add(locationOverlay)
     }
 
     private fun moveToCurrentLocation() {
         locationPermissionRepository?.let { currentLocationPermissionRepository ->
             if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
+                mapViewModel.setShowLocationNotEnabled(true)
                 mapViewModel.setEnableFollowLocation(true)
-                locationOverlay?.let {
-                    it.enableFollowLocation()
-                } ?: let {
-                    showCurrentLocation(enableFollowLocation = true)
-                }
+                showCurrentLocation(enableFollowLocation = true, showLocationNotEnabled = true)
             } else {
                 // открываю диалог с предложением открыть настройки приложения
                 QuestionDialogFragment

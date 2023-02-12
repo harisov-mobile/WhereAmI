@@ -6,4 +6,3 @@ data class MapData(
     var mapCenter: GeoPoint,
     var zoomLevel: Double
 )
-

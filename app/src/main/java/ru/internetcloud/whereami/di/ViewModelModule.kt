@@ -13,5 +13,4 @@ interface ViewModelModule {
     @ViewModelKey(MapViewModel::class)
     @Binds
     fun bindMapViewModel(impl: MapViewModel): ViewModel
-
 }
