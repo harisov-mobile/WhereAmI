@@ -13,8 +13,5 @@ interface DataModule {
     fun bindMapRepository(impl: MapRepositoryImpl): MapRepository
 
     companion object {
-
     }
-
 }
-

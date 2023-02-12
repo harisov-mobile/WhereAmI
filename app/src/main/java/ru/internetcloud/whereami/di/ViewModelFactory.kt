@@ -8,7 +8,7 @@ import javax.inject.Provider
 @ApplicationScope
 class ViewModelFactory @Inject constructor(
     private val viewModelMap: @JvmSuppressWildcards Map<Class<out ViewModel>, Provider<ViewModel>>
-): ViewModelProvider.Factory {
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return viewModelMap.get(modelClass)?.get() as T
     }

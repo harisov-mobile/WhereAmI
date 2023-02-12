@@ -1,10 +1,11 @@
 package ru.internetcloud.whereami.domain.usecase
 
-import javax.inject.Inject
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
+import javax.inject.Inject
 
 class GetLocationPermissionUseCase @Inject constructor(
-    private val locationPermissionRepository: LocationPermissionRepository) {
+    private val locationPermissionRepository: LocationPermissionRepository
+) {
 
     fun isLocationPermissionGranted(): Boolean {
         return locationPermissionRepository.isLocationPermissionGranted()

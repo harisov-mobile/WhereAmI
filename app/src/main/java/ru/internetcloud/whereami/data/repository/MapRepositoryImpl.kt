@@ -1,14 +1,14 @@
 package ru.internetcloud.whereami.data.repository
 
 import android.app.Application
-import javax.inject.Inject
 import ru.internetcloud.whereami.data.preference.MapPreferences
 import ru.internetcloud.whereami.domain.MapRepository
 import ru.internetcloud.whereami.domain.model.MapData
+import javax.inject.Inject
 
 class MapRepositoryImpl @Inject constructor(
     private val application: Application
-): MapRepository {
+) : MapRepository {
 
     override fun saveMapData(mapData: MapData) {
         MapPreferences.saveMapCenter(context = application, mapData.mapCenter)

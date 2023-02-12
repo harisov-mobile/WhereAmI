@@ -15,10 +15,11 @@ class QuestionDialogFragment : DialogFragment() {
         private const val PARENT_REQUEST_KEY = "parent_request_key"
         private const val PARENT_ANSWER_ARG_NAME = "parent_answer_arg_name"
 
-        fun newInstance(question: String,
-                        parentRequestKey: String,
-                        parentAnswerArgName: String): QuestionDialogFragment {
-
+        fun newInstance(
+            question: String,
+            parentRequestKey: String,
+            parentAnswerArgName: String
+        ): QuestionDialogFragment {
             val args = Bundle().apply {
                 putString(QUESTION_ARG, question)
                 putString(PARENT_REQUEST_KEY, parentRequestKey)
@@ -35,7 +36,6 @@ class QuestionDialogFragment : DialogFragment() {
     private var answerArgName = ""
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-
         arguments?.let { arg ->
             question = arg.getString(QUESTION_ARG, "")
             requestKey = arg.getString(PARENT_REQUEST_KEY, "")

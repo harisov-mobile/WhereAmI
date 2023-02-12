@@ -9,4 +9,6 @@
 
     <string name="offer_to_open_settings">In order to use this feature, you need to permit access to your location in the app\'s settings. Open settings?</string>
 
+    <string name="location_is_not_enabled">Location is not enabled, turn on location, please.</string>
+
 </resources>

@@ -5,4 +5,6 @@ interface LocationPermissionRepository {
     fun isLocationPermissionGranted(): Boolean
 
     fun requestLocationPermission(callback: () -> Unit)
+
+    fun isLocationEnabled(): Boolean
 }
