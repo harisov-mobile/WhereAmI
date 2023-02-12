@@ -44,6 +44,10 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
             }
         } else {
             setContentView(binding.root)
+            // если во время заставки SplashScreen повернуть экран, то у активити устанавливаем макет activity_main.xml
+            // и надо самому отобразить фрагмент,
+            // а если поворот обычный, то Операционна Система Андроид сама будет
+            // восстанавливать фрагмент после поворота, и мне ничего делать не надо:
             val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
             if (currentFragment == null) {
                 val startFragment = MapFragment()

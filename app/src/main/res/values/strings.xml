@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Were Am I</string>
+    <string name="app_name">Where Am I</string>
     <string name="splash_title">Where Am I?</string>
     <string name="show_my_current_location_on_map">Show my current location on the map</string>
 

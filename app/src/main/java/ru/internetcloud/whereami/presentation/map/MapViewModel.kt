@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import javax.inject.Inject
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Marker
 import ru.internetcloud.whereami.domain.usecase.GetMapDataUseCase
 import ru.internetcloud.whereami.domain.usecase.SaveMapDataUseCase
 
@@ -36,6 +37,10 @@ class MapViewModel @Inject constructor(
 
     fun setEnableFollowLocation(value: Boolean) {
         _mapStateLiveData.value?.enableFollowLocation = value
+    }
+
+    fun setMarker(marker: Marker) {
+        _mapStateLiveData.value?.marker = marker
     }
 
     override fun onCleared() {
