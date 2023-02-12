@@ -107,20 +107,22 @@ class MapFragment : Fragment(), FragmentResultListener {
 
         setupClickListeners()
         observeViewModel()
-        subscribeChilds()
+        subscribeChildFragments()
     }
 
     override fun onResume() {
         super.onResume()
+        // согласно документации https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
         binding.mapview.onResume()
     }
 
     override fun onPause() {
         super.onPause()
+        // согласно документации https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
         binding.mapview.onPause()
     }
 
-    private fun subscribeChilds() {
+    private fun subscribeChildFragments() {
         // (диалоговое окно - "Открыть настройки?")
         childFragmentManager.setFragmentResultListener(REQUEST_OPEN_SETTINGS_KEY, viewLifecycleOwner, this)
     }
@@ -144,7 +146,7 @@ class MapFragment : Fragment(), FragmentResultListener {
     override fun onFragmentResult(requestKey: String, result: Bundle) {
         // когда из диалогового окна прилетит ответ:
         when (requestKey) {
-            // ответ на вопрос: "Записать данные?"
+            // ответ на вопрос: "Открыть настройки?"
             REQUEST_OPEN_SETTINGS_KEY -> {
                 val openSettings: Boolean = result.getBoolean(ARG_ANSWER, false)
                 if (openSettings) {
@@ -161,7 +163,6 @@ class MapFragment : Fragment(), FragmentResultListener {
                     startActivity(settingsIntent)
                 }
             }
-
         }
     }
 
@@ -214,6 +215,13 @@ class MapFragment : Fragment(), FragmentResultListener {
         binding.mapview.controller.setCenter(mapState.mapData.mapCenter)
     }
 
+    private fun setGestures() {
+        // приближение жестами: на эмуляторе зажать CTRL + зажать левую кнопку мыши
+        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-enable-rotation-gestures
+        binding.mapview.setMultiTouchControls(true)
+        binding.mapview.overlays.add(RotationGestureOverlay(binding.mapview))
+    }
+
     private fun setCompas() {
         // Компас
         val compassOverlay = CompassOverlay(context, InternalCompassOrientationProvider(context), binding.mapview)
@@ -231,18 +239,12 @@ class MapFragment : Fragment(), FragmentResultListener {
         binding.mapview.overlays.add(scaleBarOverlay)
     }
 
-    private fun setGestures() {
-        // приближение жестами: на эмуляторе зажать CTRL + зажать левую кнопку мыши
-        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-enable-rotation-gestures
-        binding.mapview.setMultiTouchControls(true)
-        binding.mapview.overlays.add(RotationGestureOverlay(binding.mapview))
-    }
-
     private fun setMapClickListener(mapState: MapState) {
-        // Click listener
+        // Нажатия на карту:
         val mapEventsReceiver = object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
                 mapState.marker?.let { currentMarker ->
+                    // если уже есть какой-то маркер, то я его удаляю:
                     binding.mapview.overlays.remove(currentMarker)
                 }
                 p?.let { geoPoint ->
@@ -253,6 +255,7 @@ class MapFragment : Fragment(), FragmentResultListener {
             }
 
             override fun longPressHelper(p: GeoPoint?): Boolean {
+                // длинные нажатия не обрабатываю
                 return true
             }
         }
@@ -298,7 +301,7 @@ class MapFragment : Fragment(), FragmentResultListener {
         locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
             this.enableMyLocation()
             this.setPersonIcon(bitmapIcon)
-            this.setDirectionIcon(bitmapIcon) // замена белой стрелки
+            this.setDirectionIcon(bitmapIcon) // замена белой стрелки на человечка желтого с красной каемочкой
 
             if (enableFollowLocation) {
                 this.enableFollowLocation()
