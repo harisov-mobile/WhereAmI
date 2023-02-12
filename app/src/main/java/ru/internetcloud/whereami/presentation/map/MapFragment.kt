@@ -2,6 +2,7 @@ package ru.internetcloud.whereami.presentation.map
 
 import android.content.Context
 import android.content.Intent
+import android.location.Geocoder
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -15,6 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.snackbar.Snackbar
+import java.util.Locale
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -36,6 +38,7 @@ import ru.internetcloud.whereami.di.ViewModelFactory
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.dialog.QuestionDialogFragment
 import javax.inject.Inject
+import org.osmdroid.views.CustomZoomButtonsController
 
 class MapFragment : Fragment(), FragmentResultListener {
 
@@ -60,6 +63,7 @@ class MapFragment : Fragment(), FragmentResultListener {
 
     companion object {
         private const val ZOOM_LEVEL = 17.8
+        private const val ZOOM_STEP = 1
 
         private val REQUEST_OPEN_SETTINGS_KEY = "open_settings_key"
         private val ARG_ANSWER = "arg_answer"
@@ -137,9 +141,40 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun setupClickListeners() {
-        binding.floatingActionButton.setOnClickListener {
+        binding.locationFab.setOnClickListener {
             moveToCurrentLocation()
         }
+
+        binding.zoomInFab.setOnClickListener {
+            binding.mapview.controller.zoomIn()
+        }
+
+        binding.zoomOutFab.setOnClickListener {
+            binding.mapview.controller.zoomOut()
+        }
+
+        binding.settingsImageView.setOnClickListener {
+            val snackBar = Snackbar.make(
+                binding.root,
+                "zoom = ${binding.mapview.zoomLevelDouble}",
+                Snackbar.LENGTH_INDEFINITE
+            )
+            snackBar.setAction("OK") {
+                snackBar.dismiss()
+            } // если не исчезает - вызови dismiss()
+            snackBar.show()
+        }
+
+    }
+
+    private fun zoomIn() {
+        val newZoomValue = binding.mapview.zoomLevelDouble + ZOOM_STEP
+        binding.mapview.controller.setZoom(newZoomValue)
+    }
+
+    private fun zoomOut() {
+        val newZoomValue = binding.mapview.zoomLevelDouble - ZOOM_STEP
+        binding.mapview.controller.setZoom(newZoomValue)
     }
 
     override fun onFragmentResult(requestKey: String, result: Bundle) {
@@ -165,12 +200,12 @@ class MapFragment : Fragment(), FragmentResultListener {
         }
     }
 
-    private fun setMarker(geoPoint: GeoPoint, markerTitle: String) {
+    private fun setupMarker(geoPoint: GeoPoint, markerTitle: String) {
         val marker = Marker(binding.mapview).apply {
             position = geoPoint
             icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_marker)
             title = markerTitle
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
             setOnMarkerClickListener { currentMarker, mapView ->
                 // buildRoute(currentMarker)
 
@@ -212,6 +247,9 @@ class MapFragment : Fragment(), FragmentResultListener {
         binding.mapview.setTileSource(TileSourceFactory.MAPNIK)
         binding.mapview.controller.setZoom(mapState.mapData.zoomLevel)
         binding.mapview.controller.setCenter(mapState.mapData.mapCenter)
+
+        // Отключить кнопки приближения ( + - ) вместо них свои кнопки
+        binding.mapview.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
     }
 
     private fun setGestures() {
@@ -247,8 +285,28 @@ class MapFragment : Fragment(), FragmentResultListener {
                     binding.mapview.overlays.remove(currentMarker)
                 }
                 p?.let { geoPoint ->
-                    val markerTitle = "МАРКЕР"
-                    setMarker(geoPoint, markerTitle)
+                    var markerTitle = "Нет данных"
+                    try {
+                        val addressList = Geocoder(requireContext(), Locale.getDefault())
+                            .getFromLocation(geoPoint.latitude, geoPoint.longitude, 1)
+                        addressList?.let { currentAddressList ->
+                            if (currentAddressList.size > 0) {
+                                markerTitle = currentAddressList.get(0).getAddressLine(0)
+                            }
+                        }
+                    } catch (E: Exception) {
+
+                    }
+                    setupMarker(geoPoint, markerTitle)
+                    val snackBar = Snackbar.make(
+                        binding.root,
+                        markerTitle,
+                        Snackbar.LENGTH_INDEFINITE
+                    )
+                    snackBar.setAction("OK") {
+                        snackBar.dismiss()
+                    } // если не исчезает - вызови dismiss()
+                    snackBar.show()
                 }
                 return true
             }
@@ -381,7 +439,7 @@ class MapFragment : Fragment(), FragmentResultListener {
 
     private fun showMarker(currentMarker: Marker?) {
         currentMarker?.let {
-            setMarker(it.position, it.title)
+            setupMarker(it.position, it.title)
         }
     }
 }

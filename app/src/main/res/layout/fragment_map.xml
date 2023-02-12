@@ -15,12 +15,75 @@
 
     </org.osmdroid.views.MapView>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/floatingActionButton"
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_horizontal_middle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="40dp"
-        android:layout_marginBottom="50dp"
+
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.5"
+        />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/settings_image_view"
+        android:layout_width="@dimen/button_size"
+        android:layout_height="@dimen/button_size"
+        android:scaleType="centerCrop"
+
+        android:background="@color/blue_700"
+        app:tint="@color/teal_200"
+
+        app:shapeAppearanceOverlay="@style/circleImageView"
+        app:srcCompat="@drawable/ic_settings_white"
+
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+
+        android:layout_marginEnd="@dimen/button_margin_end"
+        android:layout_marginTop="@dimen/button_margin_end"
+
+        />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/zoom_in_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/button_margin_end"
+        android:layout_marginBottom="@dimen/button_margin_vertical"
+
+        android:clickable="true"
+
+        app:layout_constraintBottom_toBottomOf="@+id/guideline_horizontal_middle"
+
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@drawable/ic_add"
+        app:tint="@null"
+        android:contentDescription="@string/show_my_current_location_on_map" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/zoom_out_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/button_margin_end"
+        android:layout_marginBottom="@dimen/button_margin_vertical"
+
+        android:clickable="true"
+
+        app:layout_constraintTop_toBottomOf="@+id/zoom_in_fab"
+        android:layout_marginTop="@dimen/button_margin_vertical"
+
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@drawable/ic_horizontal_rule"
+        app:tint="@null"
+        android:contentDescription="@string/show_my_current_location_on_map" />
+
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/location_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/button_margin_end"
+        android:layout_marginBottom="80dp"
 
         android:clickable="true"
         app:layout_constraintBottom_toBottomOf="parent"
