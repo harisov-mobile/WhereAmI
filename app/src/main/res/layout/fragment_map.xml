@@ -44,6 +44,63 @@
 
         />
 
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/route_image_view"
+        android:layout_width="@dimen/button_size"
+        android:layout_height="@dimen/button_size"
+        android:scaleType="centerCrop"
+
+        android:background="@color/blue_700"
+        app:tint="@color/teal_200"
+
+        app:shapeAppearanceOverlay="@style/circleImageView"
+        app:srcCompat="@drawable/ic_route"
+
+        app:layout_constraintTop_toBottomOf="@+id/settings_image_view"
+        app:layout_constraintEnd_toEndOf="parent"
+
+        android:layout_marginEnd="@dimen/button_margin_end"
+        android:layout_marginTop="@dimen/button_margin_end"
+        />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/car_image_view"
+        android:layout_width="@dimen/button_size"
+        android:layout_height="@dimen/button_size"
+        android:scaleType="centerCrop"
+
+        android:background="@color/blue_700"
+        app:tint="@color/teal_200"
+
+        app:shapeAppearanceOverlay="@style/circleImageView"
+        app:srcCompat="@drawable/ic_car"
+
+        app:layout_constraintTop_toBottomOf="@+id/route_image_view"
+        app:layout_constraintEnd_toEndOf="parent"
+
+        android:layout_marginEnd="@dimen/button_margin_end"
+        android:layout_marginTop="@dimen/button_margin_end"
+        />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/_image_view"
+        android:layout_width="@dimen/button_size"
+        android:layout_height="@dimen/button_size"
+        android:scaleType="centerCrop"
+
+        android:background="@color/blue_700"
+        app:tint="@color/teal_200"
+
+        app:shapeAppearanceOverlay="@style/circleImageView"
+        app:srcCompat="@drawable/ic_close"
+
+        app:layout_constraintTop_toBottomOf="@+id/car_image_view"
+        app:layout_constraintEnd_toEndOf="parent"
+
+        android:layout_marginEnd="@dimen/button_margin_end"
+        android:layout_marginTop="@dimen/button_margin_end"
+        />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/zoom_in_fab"
         android:layout_width="wrap_content"
