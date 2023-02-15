@@ -83,7 +83,7 @@
         />
 
     <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/_image_view"
+        android:id="@+id/remove_route_image_view"
         android:layout_width="@dimen/button_size"
         android:layout_height="@dimen/button_size"
         android:scaleType="centerCrop"

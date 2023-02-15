@@ -7,14 +7,17 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentResultListener
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import java.util.Locale
 import org.osmdroid.config.Configuration
@@ -38,7 +41,13 @@ import ru.internetcloud.whereami.di.ViewModelFactory
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.dialog.QuestionDialogFragment
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.views.CustomZoomButtonsController
+import org.osmdroid.views.overlay.Polyline
 
 class MapFragment : Fragment(), FragmentResultListener {
 
@@ -165,16 +174,37 @@ class MapFragment : Fragment(), FragmentResultListener {
             snackBar.show()
         }
 
-    }
+        binding.routeImageView.setOnClickListener {
+            mapViewModel.mapStateLiveData.value?.polyline?.let { currentPolyline ->
+                // если уже есть какой-то маршрут, то я его удаляю:
+                binding.mapview.overlays.remove(currentPolyline)
+                binding.mapview.invalidate()
+                mapViewModel.setPolyline(null)
+                mapViewModel.setRouteStartPoint(null)
+            }
 
-    private fun zoomIn() {
-        val newZoomValue = binding.mapview.zoomLevelDouble + ZOOM_STEP
-        binding.mapview.controller.setZoom(newZoomValue)
-    }
+            mapViewModel.mapStateLiveData.value?.marker?.let { currentMarker ->
+                buildRoute(marker = currentMarker, showSnackbar = true)
+            }
+        }
 
-    private fun zoomOut() {
-        val newZoomValue = binding.mapview.zoomLevelDouble - ZOOM_STEP
-        binding.mapview.controller.setZoom(newZoomValue)
+        binding.removeRouteImageView.setOnClickListener {
+            mapViewModel.mapStateLiveData.value?.polyline?.let { currentPolyline ->
+                // если уже есть какой-то маршрут, то я его удаляю:
+                binding.mapview.overlays.remove(currentPolyline)
+                binding.mapview.invalidate()
+                mapViewModel.setPolyline(null)
+                mapViewModel.setRouteStartPoint(null)
+            }
+            mapViewModel.mapStateLiveData.value?.marker?.let { currentMarker ->
+                // если уже есть какой-то маркер, то я его удаляю:
+                binding.mapview.overlays.remove(currentMarker)
+                binding.mapview.invalidate()
+                mapViewModel.setMarker(null)
+            }
+            showRouteButtons(visible = false)
+        }
+
     }
 
     override fun onFragmentResult(requestKey: String, result: Bundle) {
@@ -207,8 +237,6 @@ class MapFragment : Fragment(), FragmentResultListener {
             title = markerTitle
             setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
             setOnMarkerClickListener { currentMarker, mapView ->
-                // buildRoute(currentMarker)
-
                 val snackBar = Snackbar.make(
                     binding.root,
                     markerTitle,
@@ -222,11 +250,10 @@ class MapFragment : Fragment(), FragmentResultListener {
                 true
             }
         }
-        // polylineMap.put(marker, null)
-
         binding.mapview.overlays.add(marker)
         binding.mapview.invalidate()
         mapViewModel.setMarker(marker)
+        showRouteButtons(visible = true)
     }
 
     private fun showMap(mapState: MapState) {
@@ -237,6 +264,7 @@ class MapFragment : Fragment(), FragmentResultListener {
         setMapClickListener(mapState)
         showLocation(mapState)
         showMarker(mapState.marker)
+        showPolyline(mapState.polyline)
     }
 
     private fun initMap(mapState: MapState) {
@@ -280,10 +308,19 @@ class MapFragment : Fragment(), FragmentResultListener {
         // Нажатия на карту:
         val mapEventsReceiver = object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                mapState.polyline?.let { currentPolyline ->
+                    // если уже есть какой-то маршрут, то я его удаляю:
+                    binding.mapview.overlays.remove(currentPolyline)
+                    mapViewModel.setPolyline(null)
+                    mapViewModel.setRouteStartPoint(null)
+                }
+
                 mapState.marker?.let { currentMarker ->
                     // если уже есть какой-то маркер, то я его удаляю:
                     binding.mapview.overlays.remove(currentMarker)
+                    mapViewModel.setMarker(null)
                 }
+
                 p?.let { geoPoint ->
                     var markerTitle = "Нет данных"
                     try {
@@ -440,6 +477,78 @@ class MapFragment : Fragment(), FragmentResultListener {
     private fun showMarker(currentMarker: Marker?) {
         currentMarker?.let {
             setupMarker(it.position, it.title)
+        } ?: let {
+            showRouteButtons(visible = false)
+        }
+    }
+
+    private fun showPolyline(currentPolyline: Polyline?) {
+        currentPolyline?.let {
+            mapViewModel.mapStateLiveData.value?.marker?.let { currentMarker ->
+                buildRoute(marker = currentMarker, showSnackbar = false)
+            }
+        }
+    }
+
+    private fun showRouteButtons(visible: Boolean) {
+        binding.routeImageView.isVisible = visible
+        binding.carImageView.isVisible = visible
+        binding.removeRouteImageView.isVisible = visible
+    }
+
+    private fun buildRoute(marker: Marker, showSnackbar: Boolean) {
+        locationOverlay?.let { currentLocationOverlay ->
+            lifecycleScope.launch(Dispatchers.IO) {
+                val endPoint: GeoPoint = marker.position
+                val roadManager = OSRMRoadManager(requireContext(), System.getProperty("http.agent"))
+                roadManager.setMean(OSRMRoadManager.MEAN_BY_FOOT) // м.б. MEAN_BY_CAR и на мотоцикле
+
+                val startLocation = if (currentLocationOverlay.myLocation == null) {
+                    mapViewModel.mapStateLiveData.value?.routeStartPoint
+                } else {
+                    mapViewModel.setRouteStartPoint(currentLocationOverlay.myLocation)
+                    currentLocationOverlay.myLocation
+                }
+
+                startLocation?.let {
+                    val wayPoints = arrayListOf<GeoPoint>(startLocation, endPoint)
+                    val route = roadManager.getRoad(wayPoints)
+                    val routePolyline = RoadManager.buildRoadOverlay(route)
+
+                    withContext(Dispatchers.Main) {
+                        binding.mapview.overlays.add(routePolyline)
+                        binding.mapview.invalidate()
+                        mapViewModel.setPolyline(routePolyline)
+
+                        if (showSnackbar) {
+                            val duration: Int = (route.mDuration / 60).toInt()
+                            val length: Int = (route.mLength * 1000).toInt()
+                            val snackBar = Snackbar.make(
+                                binding.root,
+                                "Расстояние ${length} метров, время ${duration} мин.",
+                                Snackbar.LENGTH_INDEFINITE
+                            )
+                            snackBar.setAction("OK") {
+                                snackBar.dismiss()
+                            } // если не исчезает - вызови dismiss()
+                            snackBar.show()
+                        }
+                    }
+                } ?: let {
+                    if (showSnackbar) {
+                        val snackBar = Snackbar.make(
+                            binding.root,
+                            R.string.location_is_not_available_yet,
+                            Snackbar.LENGTH_SHORT
+                        )
+                        snackBar.setAction("OK") {
+                            snackBar.dismiss()
+                        } // если не исчезает - вызови dismiss()
+                        snackBar.show()
+                    }
+                }
+            }
         }
     }
 }
+
