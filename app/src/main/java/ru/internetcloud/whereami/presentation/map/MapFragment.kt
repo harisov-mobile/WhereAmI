@@ -183,8 +183,14 @@ class MapFragment : Fragment(), FragmentResultListener {
                 mapViewModel.setRouteStartPoint(null)
             }
 
-            mapViewModel.mapStateLiveData.value?.marker?.let { currentMarker ->
-                buildRoute(marker = currentMarker, showSnackbar = true)
+            locationPermissionRepository?.let { currentLocationPermissionRepository ->
+                if (currentLocationPermissionRepository.isLocationEnabled()) {
+                    mapViewModel.mapStateLiveData.value?.marker?.let { currentMarker ->
+                        buildRoute(marker = currentMarker, showSnackbar = true)
+                    }
+                } else {
+                    disableLocationShowing(showLocationNotEnabled = true)
+                }
             }
         }
 
@@ -373,7 +379,7 @@ class MapFragment : Fragment(), FragmentResultListener {
                     currentLocationPermissionRepository.requestLocationPermission {
                         // коллбек выполнится если пользователь даст разрешение
                         mapViewModel.setEnableFollowLocation(true)
-                        mapViewModel.setEnableFollowLocation(true)
+                        mapViewModel.setShowLocationNotEnabled(true)
                         showCurrentLocation(
                             enableFollowLocation = true,
                             showLocationNotEnabled = true,
@@ -429,29 +435,33 @@ class MapFragment : Fragment(), FragmentResultListener {
                     binding.mapview.overlays.add(locationOverlay)
                 }
             } else {
-                locationOverlay?.let { currentLocationOverlay ->
-                    binding.mapview.overlays.remove(currentLocationOverlay)
-                    binding.mapview.invalidate()
-                    locationOverlay = null
-                }
-
-                mapViewModel.setEnableFollowLocation(false)
-
-                if (showLocationNotEnabled) {
-                    val snackBar = Snackbar.make(
-                        binding.root,
-                        R.string.location_is_not_enabled,
-                        Snackbar.LENGTH_INDEFINITE
-                    )
-                    snackBar.setAction("OK") {
-                        snackBar.dismiss()
-                    } // если не исчезает - вызови dismiss()
-                    snackBar.show()
-                    mapViewModel.setShowLocationNotEnabled(false)
-                } else {
-                    // Ничего не делаю
-                }
+                disableLocationShowing(showLocationNotEnabled)
             }
+        }
+    }
+
+    private fun disableLocationShowing(showLocationNotEnabled: Boolean) {
+        locationOverlay?.let { currentLocationOverlay ->
+            binding.mapview.overlays.remove(currentLocationOverlay)
+            binding.mapview.invalidate()
+            locationOverlay = null
+        }
+
+        mapViewModel.setEnableFollowLocation(false)
+
+        if (showLocationNotEnabled) {
+            val snackBar = Snackbar.make(
+                binding.root,
+                R.string.location_is_not_enabled,
+                Snackbar.LENGTH_INDEFINITE
+            )
+            snackBar.setAction("OK") {
+                snackBar.dismiss()
+            } // если не исчезает - вызови dismiss()
+            snackBar.show()
+            mapViewModel.setShowLocationNotEnabled(false)
+        } else {
+            // Ничего не делаю
         }
     }
 
