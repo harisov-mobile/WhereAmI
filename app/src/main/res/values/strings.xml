@@ -11,5 +11,10 @@
 
     <string name="location_is_not_enabled">Location is not enabled, turn on location, please.</string>
     <string name="location_is_not_available_yet">Location is not available yet, try later</string>
+    <string name="car">Car</string>
+    <string name="bike">Bike</string>
+    <string name="foot">Foot</string>
+
+    <string name="route_text">%s : distance %s meters, time %s min.</string>
 
 </resources>

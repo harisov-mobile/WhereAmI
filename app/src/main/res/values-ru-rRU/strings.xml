@@ -9,4 +9,8 @@
     <string name="splash_title">Где я?</string>
     <string name="location_is_not_enabled">Местоположение не включено, включите местоположение</string>
     <string name="location_is_not_available_yet">Местоположение сейчас недоступно, попробуйте позже</string>
+    <string name="car">Автомобиль</string>
+    <string name="bike">Велосипед</string>
+    <string name="foot">Пешком</string>
+    <string name="route_text">%s : расстояние %s метров, время %s мин.</string>
 </resources>

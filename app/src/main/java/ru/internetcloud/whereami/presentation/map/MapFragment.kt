@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -178,31 +177,19 @@ class MapFragment : Fragment(), FragmentResultListener {
         }
 
         binding.routeImageView.setOnClickListener {
-            mapViewModel.mapStateLiveData.value?.polyline?.let { currentPolyline ->
-                // если уже есть какой-то маршрут, то я его удаляю:
-                binding.mapview.overlays.remove(currentPolyline)
-                binding.mapview.invalidate()
-                mapViewModel.setPolyline(null)
-                mapViewModel.setRouteStartPoint(null)
-            }
-
-            locationPermissionRepository?.let { currentLocationPermissionRepository ->
-                if (currentLocationPermissionRepository.isLocationEnabled()) {
-                    mapViewModel.mapStateLiveData.value?.marker?.let { currentMarker ->
-                        buildRoute(marker = currentMarker, showSnackbar = true)
-                    }
-                } else {
-                    disableLocationShowing(showLocationNotEnabled = true)
-                }
-            }
+            showRoute()
         }
 
         binding.carImageView.setOnClickListener {
             val transportationMode = transportationSwitcher.getNextTransportationMode(
-                mapViewModel.mapStateLiveData.value?.transportationMode ?: ""
+                mapViewModel.getTransportationMode()
             )
             mapViewModel.setTransportationMode(transportationMode)
             setupTransportationIcon(transportationMode)
+
+            mapViewModel.mapStateLiveData.value?.polyline?.let {
+                showRoute()
+            }
         }
 
         binding.removeRouteImageView.setOnClickListener {
@@ -221,7 +208,26 @@ class MapFragment : Fragment(), FragmentResultListener {
             }
             showRouteButtons(visible = false)
         }
+    }
 
+    private fun showRoute() {
+        mapViewModel.mapStateLiveData.value?.polyline?.let { currentPolyline ->
+            // если уже есть какой-то маршрут, то я его удаляю:
+            binding.mapview.overlays.remove(currentPolyline)
+            binding.mapview.invalidate()
+            mapViewModel.setPolyline(null)
+            mapViewModel.setRouteStartPoint(null)
+        }
+
+        locationPermissionRepository?.let { currentLocationPermissionRepository ->
+            if (currentLocationPermissionRepository.isLocationEnabled()) {
+                mapViewModel.mapStateLiveData.value?.marker?.let { currentMarker ->
+                    buildRoute(marker = currentMarker, showSnackbar = true)
+                }
+            } else {
+                disableLocationShowing(showLocationNotEnabled = true)
+            }
+        }
     }
 
     override fun onFragmentResult(requestKey: String, result: Bundle) {
@@ -537,6 +543,16 @@ class MapFragment : Fragment(), FragmentResultListener {
         }
     }
 
+    private fun getTransportationName(): String {
+        val transportationMode = mapViewModel.getTransportationMode()
+        return when(transportationMode) {
+            OSRMRoadManager.MEAN_BY_FOOT ->  getString(R.string.foot)
+            OSRMRoadManager.MEAN_BY_BIKE ->  getString(R.string.bike)
+            OSRMRoadManager.MEAN_BY_CAR ->  getString(R.string.car)
+            else ->  throw IllegalStateException("Unknown transportation mode = $transportationMode")
+        }
+    }
+
     private fun buildRoute(marker: Marker, showSnackbar: Boolean) {
 
         if (locationOverlay == null) {
@@ -547,7 +563,7 @@ class MapFragment : Fragment(), FragmentResultListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 val endPoint: GeoPoint = marker.position
                 val roadManager = OSRMRoadManager(requireContext(), System.getProperty("http.agent"))
-                roadManager.setMean(OSRMRoadManager.MEAN_BY_FOOT) // м.б. MEAN_BY_CAR и на мотоцикле
+                roadManager.setMean(mapViewModel.getTransportationMode()) // м.б. MEAN_BY_CAR и на мотоцикле
 
                 val startLocation = if (currentLocationOverlay.myLocation == null) {
                     mapViewModel.mapStateLiveData.value?.routeStartPoint
@@ -569,9 +585,18 @@ class MapFragment : Fragment(), FragmentResultListener {
                         if (showSnackbar) {
                             val duration: Int = (route.mDuration / 60).toInt()
                             val length: Int = (route.mLength * 1000).toInt()
+                            val transportationName = getTransportationName()
+
+                            val routeText = String.format(
+                                getString(R.string.route_text),
+                                transportationName,
+                                length.toString(),
+                                duration.toString()
+                            )
+
                             val snackBar = Snackbar.make(
                                 binding.root,
-                                "Расстояние ${length} метров, время ${duration} мин.",
+                                routeText,
                                 Snackbar.LENGTH_INDEFINITE
                             )
                             snackBar.setAction("OK") {
