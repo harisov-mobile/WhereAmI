@@ -54,6 +54,9 @@ class MapFragment : Fragment(), FragmentResultListener {
     @Inject
     lateinit var viewModelFactory: ViewModelFactory
 
+    @Inject
+    lateinit var transportationSwitcher: TransportationSwitcher
+
     private val mapViewModel: MapViewModel by lazy {
         ViewModelProvider(this, viewModelFactory).get(MapViewModel::class.java)
     }
@@ -192,6 +195,14 @@ class MapFragment : Fragment(), FragmentResultListener {
                     disableLocationShowing(showLocationNotEnabled = true)
                 }
             }
+        }
+
+        binding.carImageView.setOnClickListener {
+            val transportationMode = transportationSwitcher.getNextTransportationMode(
+                mapViewModel.mapStateLiveData.value?.transportationMode ?: ""
+            )
+            mapViewModel.setTransportationMode(transportationMode)
+            setupTransportationIcon(transportationMode)
         }
 
         binding.removeRouteImageView.setOnClickListener {
@@ -505,9 +516,25 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun showRouteButtons(visible: Boolean) {
+
+        if (visible) {
+            mapViewModel.mapStateLiveData.value?.transportationMode.let { currentTransportationMode ->
+                setupTransportationIcon(currentTransportationMode)
+            }
+        }
+
         binding.routeImageView.isVisible = visible
         binding.carImageView.isVisible = visible
         binding.removeRouteImageView.isVisible = visible
+    }
+
+    private fun setupTransportationIcon(currentTransportationMode: String?) {
+        when(currentTransportationMode) {
+            OSRMRoadManager.MEAN_BY_FOOT ->  binding.carImageView.setImageResource(R.drawable.ic_foot)
+            OSRMRoadManager.MEAN_BY_BIKE ->  binding.carImageView.setImageResource(R.drawable.ic_bike)
+            OSRMRoadManager.MEAN_BY_CAR ->  binding.carImageView.setImageResource(R.drawable.ic_car)
+            else ->  throw IllegalStateException("Unknown transportation mode = $currentTransportationMode")
+        }
     }
 
     private fun buildRoute(marker: Marker, showSnackbar: Boolean) {

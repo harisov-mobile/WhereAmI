@@ -56,6 +56,10 @@ class MapViewModel @Inject constructor(
         _mapStateLiveData.value?.routeStartPoint = routeStartPoint
     }
 
+    fun setTransportationMode(transportationMode: String) {
+        _mapStateLiveData.value?.transportationMode = transportationMode
+    }
+
     override fun onCleared() {
         super.onCleared()
         _mapStateLiveData.value?.let { mapState ->

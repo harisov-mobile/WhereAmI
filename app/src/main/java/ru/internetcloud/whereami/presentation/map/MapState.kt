@@ -1,5 +1,6 @@
 package ru.internetcloud.whereami.presentation.map
 
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
@@ -12,5 +13,6 @@ data class MapState(
     var marker: Marker? = null,
     var routeStartPoint: GeoPoint? = null,
     var polyline: Polyline? = null,
-    var showLocationNotEnabled: Boolean = true
+    var showLocationNotEnabled: Boolean = true,
+    var transportationMode: String = OSRMRoadManager.MEAN_BY_FOOT
 )
