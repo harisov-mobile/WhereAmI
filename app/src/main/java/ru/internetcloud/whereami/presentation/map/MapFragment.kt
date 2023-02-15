@@ -410,34 +410,38 @@ class MapFragment : Fragment(), FragmentResultListener {
         locationPermissionRepository?.let { currentLocationPermissionRepository ->
             if (currentLocationPermissionRepository.isLocationEnabled()) {
                 locationOverlay?.enableFollowLocation() ?: let {
-                    // преобразование в bitmap:
-                    val bitmapIcon =
-                        ContextCompat.getDrawable(requireContext(), R.drawable.ic_man_yellow_with_border_red)!!
-                            .toBitmap()
-
-                    // получение геолокации пользователя:
-                    // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-add-the-my-location-overlay
-                    locationOverlay =
-                        MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
-                            this.enableMyLocation()
-                            this.setPersonIcon(bitmapIcon)
-                            this.setDirectionIcon(bitmapIcon) // замена белой стрелки на человечка желтого с красной каемочкой
-
-                            if (enableFollowLocation) {
-                                this.enableFollowLocation()
-                            }
-                        }
-
-                    requiredZoom?.let { zoom ->
-                        binding.mapview.controller.setZoom(zoom)
-                    }
-
-                    binding.mapview.overlays.add(locationOverlay)
+                    setupLocationOverlay(enableFollowLocation = enableFollowLocation, requiredZoom = requiredZoom)
                 }
             } else {
                 disableLocationShowing(showLocationNotEnabled)
             }
         }
+    }
+
+    private fun setupLocationOverlay(enableFollowLocation: Boolean, requiredZoom: Double? = null) {
+        // преобразование в bitmap:
+        val bitmapIcon =
+            ContextCompat.getDrawable(requireContext(), R.drawable.ic_man_yellow_with_border_red)!!
+                .toBitmap()
+
+        // получение геолокации пользователя:
+        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)#how-to-add-the-my-location-overlay
+        locationOverlay =
+            MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
+                this.enableMyLocation()
+                this.setPersonIcon(bitmapIcon)
+                this.setDirectionIcon(bitmapIcon) // замена белой стрелки на человечка желтого с красной каемочкой
+
+                if (enableFollowLocation) {
+                    this.enableFollowLocation()
+                }
+            }
+
+        requiredZoom?.let { zoom ->
+            binding.mapview.controller.setZoom(zoom)
+        }
+
+        binding.mapview.overlays.add(locationOverlay)
     }
 
     private fun disableLocationShowing(showLocationNotEnabled: Boolean) {
@@ -507,6 +511,11 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun buildRoute(marker: Marker, showSnackbar: Boolean) {
+
+        if (locationOverlay == null) {
+            setupLocationOverlay(enableFollowLocation = false, requiredZoom = null)
+        }
+
         locationOverlay?.let { currentLocationOverlay ->
             lifecycleScope.launch(Dispatchers.IO) {
                 val endPoint: GeoPoint = marker.position
@@ -555,6 +564,7 @@ class MapFragment : Fragment(), FragmentResultListener {
                             snackBar.dismiss()
                         } // если не исчезает - вызови dismiss()
                         snackBar.show()
+                        binding.mapview.invalidate()
                     }
                 }
             }
