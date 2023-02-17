@@ -50,6 +50,12 @@ import org.osmdroid.views.overlay.Polyline
 
 class MapFragment : Fragment(), FragmentResultListener {
 
+    interface OnMapEvents {
+        fun onShowSettings()
+    }
+
+    var hostActivity: OnMapEvents? = null
+
     @Inject
     lateinit var viewModelFactory: ViewModelFactory
 
@@ -83,11 +89,13 @@ class MapFragment : Fragment(), FragmentResultListener {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         locationPermissionRepository = context as LocationPermissionRepository
+        hostActivity = context as OnMapEvents
     }
 
     override fun onDetach() {
         super.onDetach()
         locationPermissionRepository = null
+        hostActivity = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,6 +121,8 @@ class MapFragment : Fragment(), FragmentResultListener {
         locationOverlay?.let { currentLocationOverlay ->
             mapViewModel.setEnableFollowLocation(currentLocationOverlay.isFollowLocationEnabled)
         }
+
+        locationOverlay = null // занулить, т.к. при возвращении из Settings-фрагмента не показывается
         _binding = null
     }
 
@@ -165,15 +175,7 @@ class MapFragment : Fragment(), FragmentResultListener {
         }
 
         binding.settingsImageView.setOnClickListener {
-            val snackBar = Snackbar.make(
-                binding.root,
-                "zoom = ${binding.mapview.zoomLevelDouble}",
-                Snackbar.LENGTH_INDEFINITE
-            )
-            snackBar.setAction("OK") {
-                snackBar.dismiss()
-            } // если не исчезает - вызови dismiss()
-            snackBar.show()
+            hostActivity?.onShowSettings()
         }
 
         binding.routeImageView.setOnClickListener {

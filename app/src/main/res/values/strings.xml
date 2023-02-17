@@ -18,4 +18,7 @@
     <string name="route_text">%s : distance %s meters, time %s min.</string>
     <string name="route_text_sec">%s : distance %s meters, time %s min. %s sec.</string>
 
+    <string name="settings_title">Settings</string>
+    <string name="under_construction">Under construction</string>
+
 </resources>
