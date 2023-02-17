@@ -19,12 +19,20 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import java.util.Locale
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.ScaleBarOverlay
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
@@ -39,16 +47,14 @@ import ru.internetcloud.whereami.di.ApplicationComponent
 import ru.internetcloud.whereami.di.ViewModelFactory
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.dialog.QuestionDialogFragment
-import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.osmdroid.bonuspack.routing.OSRMRoadManager
-import org.osmdroid.bonuspack.routing.RoadManager
-import org.osmdroid.views.CustomZoomButtonsController
-import org.osmdroid.views.overlay.Polyline
 
 class MapFragment : Fragment(), FragmentResultListener {
+
+    interface OnMapEvents {
+        fun onShowSettings()
+    }
+
+    var hostActivity: OnMapEvents? = null
 
     @Inject
     lateinit var viewModelFactory: ViewModelFactory
@@ -83,11 +89,13 @@ class MapFragment : Fragment(), FragmentResultListener {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         locationPermissionRepository = context as LocationPermissionRepository
+        hostActivity = context as OnMapEvents
     }
 
     override fun onDetach() {
         super.onDetach()
         locationPermissionRepository = null
+        hostActivity = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,6 +121,8 @@ class MapFragment : Fragment(), FragmentResultListener {
         locationOverlay?.let { currentLocationOverlay ->
             mapViewModel.setEnableFollowLocation(currentLocationOverlay.isFollowLocationEnabled)
         }
+
+        locationOverlay = null // занулить, т.к. при возвращении из Settings-фрагмента не показывается
         _binding = null
     }
 
@@ -165,15 +175,7 @@ class MapFragment : Fragment(), FragmentResultListener {
         }
 
         binding.settingsImageView.setOnClickListener {
-            val snackBar = Snackbar.make(
-                binding.root,
-                "zoom = ${binding.mapview.zoomLevelDouble}",
-                Snackbar.LENGTH_INDEFINITE
-            )
-            snackBar.setAction("OK") {
-                snackBar.dismiss()
-            } // если не исчезает - вызови dismiss()
-            snackBar.show()
+            hostActivity?.onShowSettings()
         }
 
         binding.routeImageView.setOnClickListener {
@@ -216,7 +218,7 @@ class MapFragment : Fragment(), FragmentResultListener {
             binding.mapview.overlays.remove(currentPolyline)
             binding.mapview.invalidate()
             mapViewModel.setPolyline(null)
-            mapViewModel.setRouteStartPoint(null)
+            mapViewModel.setRouteStartPoint(null) // обнуляю routeStartPoint
         }
 
         locationPermissionRepository?.let { currentLocationPermissionRepository ->
@@ -426,7 +428,22 @@ class MapFragment : Fragment(), FragmentResultListener {
     ) {
         locationPermissionRepository?.let { currentLocationPermissionRepository ->
             if (currentLocationPermissionRepository.isLocationEnabled()) {
-                locationOverlay?.enableFollowLocation() ?: let {
+                locationOverlay?.let { currentLocationOverlay ->
+                    if (currentLocationOverlay.myLocation == null) {
+                        val snackBar = Snackbar.make(
+                            binding.root,
+                            R.string.location_is_not_available_yet,
+                            Snackbar.LENGTH_SHORT
+                        )
+                        snackBar.setAction("OK") {
+                            snackBar.dismiss()
+                        } // если не исчезает - вызови dismiss()
+                        snackBar.show()
+                        binding.mapview.invalidate()
+                    }
+                    currentLocationOverlay.enableFollowLocation()
+                }
+                 ?: let {
                     setupLocationOverlay(enableFollowLocation = enableFollowLocation, requiredZoom = requiredZoom)
                 }
             } else {

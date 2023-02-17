@@ -16,8 +16,11 @@ import ru.internetcloud.whereami.R
 import ru.internetcloud.whereami.databinding.ActivityMainBinding
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.map.MapFragment
+import ru.internetcloud.whereami.presentation.settings.SettingsFragment
 
-class MainActivity : AppCompatActivity(), LocationPermissionRepository {
+class MainActivity : AppCompatActivity(),
+    LocationPermissionRepository,
+        MapFragment.OnMapEvents {
 
     private val binding by lazy {
         ActivityMainBinding.inflate(layoutInflater)
@@ -113,5 +116,10 @@ class MainActivity : AppCompatActivity(), LocationPermissionRepository {
         val locationManager: LocationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
             locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
+    override fun onShowSettings() {
+        val fragment = SettingsFragment()
+        showFragment(fragment = fragment, withBackStack = true)
     }
 }

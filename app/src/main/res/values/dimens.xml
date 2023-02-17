@@ -8,4 +8,11 @@
     <dimen name="splash_title_text_size">36sp</dimen>
     <dimen name="splash_title_margin">32dp</dimen>
 
+    <dimen name="small_margin">8dp</dimen>
+    <dimen name="medium_margin">16dp</dimen>
+    <dimen name="large_margin">32dp</dimen>
+
+    <dimen name="large_text_size">32sp</dimen>
+    <dimen name="normal_text_size">20sp</dimen>
+
 </resources>

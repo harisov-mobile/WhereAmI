@@ -14,4 +14,6 @@
     <string name="foot">Пешком</string>
     <string name="route_text">%s : расстояние %s метров, время %s мин.</string>
     <string name="route_text_sec">%s : расстояние %s метров, время %s мин. %s сек.</string>
+    <string name="settings_title">Настройки</string>
+    <string name="under_construction">В разработке</string>
 </resources>
