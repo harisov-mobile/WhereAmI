@@ -8,4 +8,10 @@
     <string name="offer_to_open_settings">Для того, чтобы использовать эту функцию, необходимо открыть доступ к местоположению в настройках приложения. Открыть настройки?</string>
     <string name="splash_title">Где я?</string>
     <string name="location_is_not_enabled">Местоположение не включено, включите местоположение</string>
+    <string name="location_is_not_available_yet">Местоположение сейчас недоступно, попробуйте позже</string>
+    <string name="car">Автомобиль</string>
+    <string name="bike">Велосипед</string>
+    <string name="foot">Пешком</string>
+    <string name="route_text">%s : расстояние %s метров, время %s мин.</string>
+    <string name="route_text_sec">%s : расстояние %s метров, время %s мин. %s сек.</string>
 </resources>

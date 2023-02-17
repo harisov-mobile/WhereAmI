@@ -8,6 +8,9 @@ import org.osmdroid.views.overlay.Marker
 import ru.internetcloud.whereami.domain.usecase.GetMapDataUseCase
 import ru.internetcloud.whereami.domain.usecase.SaveMapDataUseCase
 import javax.inject.Inject
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
+import org.osmdroid.views.overlay.Polyline
+import ru.internetcloud.whereami.R
 
 class MapViewModel @Inject constructor(
     getMapDataUseCase: GetMapDataUseCase,
@@ -43,8 +46,24 @@ class MapViewModel @Inject constructor(
         _mapStateLiveData.value?.showLocationNotEnabled = value
     }
 
-    fun setMarker(marker: Marker) {
+    fun setMarker(marker: Marker?) {
         _mapStateLiveData.value?.marker = marker
+    }
+
+    fun setPolyline(polyline: Polyline?) {
+        _mapStateLiveData.value?.polyline = polyline
+    }
+
+    fun setRouteStartPoint(routeStartPoint: GeoPoint?) {
+        _mapStateLiveData.value?.routeStartPoint = routeStartPoint
+    }
+
+    fun setTransportationMode(transportationMode: String) {
+        _mapStateLiveData.value?.transportationMode = transportationMode
+    }
+
+    fun getTransportationMode(): String {
+        return _mapStateLiveData.value?.transportationMode ?: throw IllegalStateException("Can not get transportation mode")
     }
 
     override fun onCleared() {
