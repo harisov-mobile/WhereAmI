@@ -16,5 +16,6 @@
     <string name="foot">Foot</string>
 
     <string name="route_text">%s : distance %s meters, time %s min.</string>
+    <string name="route_text_sec">%s : distance %s meters, time %s min. %s sec.</string>
 
 </resources>

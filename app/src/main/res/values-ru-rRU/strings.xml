@@ -13,4 +13,5 @@
     <string name="bike">Велосипед</string>
     <string name="foot">Пешком</string>
     <string name="route_text">%s : расстояние %s метров, время %s мин.</string>
+    <string name="route_text_sec">%s : расстояние %s метров, время %s мин. %s сек.</string>
 </resources>

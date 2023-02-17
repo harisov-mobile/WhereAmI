@@ -74,7 +74,7 @@ class MapFragment : Fragment(), FragmentResultListener {
 
     companion object {
         private const val ZOOM_LEVEL = 17.8
-        private const val ZOOM_STEP = 1
+        private const val DURATION_MIN = 4
 
         private val REQUEST_OPEN_SETTINGS_KEY = "open_settings_key"
         private val ARG_ANSWER = "arg_answer"
@@ -583,16 +583,27 @@ class MapFragment : Fragment(), FragmentResultListener {
                         mapViewModel.setPolyline(routePolyline)
 
                         if (showSnackbar) {
-                            val duration: Int = (route.mDuration / 60).toInt()
+                            val durationMinutes: Int = (route.mDuration / 60).toInt()
+                            val durationSeconds: Int = route.mDuration.toInt() - durationMinutes * 60
                             val length: Int = (route.mLength * 1000).toInt()
                             val transportationName = getTransportationName()
 
-                            val routeText = String.format(
-                                getString(R.string.route_text),
-                                transportationName,
-                                length.toString(),
-                                duration.toString()
-                            )
+                            val routeText = if (durationMinutes > DURATION_MIN) {
+                                String.format(
+                                    getString(R.string.route_text),
+                                    transportationName,
+                                    length.toString(),
+                                    durationMinutes.toString()
+                                )
+                            } else {
+                                String.format(
+                                    getString(R.string.route_text_sec),
+                                    transportationName,
+                                    length.toString(),
+                                    durationMinutes.toString(),
+                                    durationSeconds.toString()
+                                )
+                            }
 
                             val snackBar = Snackbar.make(
                                 binding.root,
