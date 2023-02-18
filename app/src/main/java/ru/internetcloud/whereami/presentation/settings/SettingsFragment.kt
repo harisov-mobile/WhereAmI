@@ -17,5 +17,4 @@ class SettingsFragment : Fragment() {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
     }
-
 }

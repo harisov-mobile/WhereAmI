@@ -30,6 +30,8 @@
         android:layout_height="@dimen/button_size"
         android:scaleType="centerCrop"
 
+        android:visibility="invisible"
+
         android:background="@color/white"
         app:tint="@color/gray_600"
 
