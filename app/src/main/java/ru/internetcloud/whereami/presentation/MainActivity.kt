@@ -18,9 +18,10 @@ import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.map.MapFragment
 import ru.internetcloud.whereami.presentation.settings.SettingsFragment
 
-class MainActivity : AppCompatActivity(),
+class MainActivity :
+    AppCompatActivity(),
     LocationPermissionRepository,
-        MapFragment.OnMapEvents {
+    MapFragment.OnMapEvents {
 
     private val binding by lazy {
         ActivityMainBinding.inflate(layoutInflater)

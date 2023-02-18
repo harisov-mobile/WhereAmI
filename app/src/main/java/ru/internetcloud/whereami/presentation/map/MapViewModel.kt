@@ -5,12 +5,10 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import ru.internetcloud.whereami.domain.usecase.GetMapDataUseCase
 import ru.internetcloud.whereami.domain.usecase.SaveMapDataUseCase
 import javax.inject.Inject
-import org.osmdroid.bonuspack.routing.OSRMRoadManager
-import org.osmdroid.views.overlay.Polyline
-import ru.internetcloud.whereami.R
 
 class MapViewModel @Inject constructor(
     getMapDataUseCase: GetMapDataUseCase,

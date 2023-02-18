@@ -18,8 +18,6 @@ import androidx.fragment.app.FragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
-import java.util.Locale
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,6 +45,8 @@ import ru.internetcloud.whereami.di.ApplicationComponent
 import ru.internetcloud.whereami.di.ViewModelFactory
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.dialog.QuestionDialogFragment
+import java.util.Locale
+import javax.inject.Inject
 
 class MapFragment : Fragment(), FragmentResultListener {
 
@@ -357,7 +357,6 @@ class MapFragment : Fragment(), FragmentResultListener {
                             }
                         }
                     } catch (E: Exception) {
-
                     }
                     setupMarker(geoPoint, markerTitle)
                     val snackBar = Snackbar.make(
@@ -443,9 +442,9 @@ class MapFragment : Fragment(), FragmentResultListener {
                     }
                     currentLocationOverlay.enableFollowLocation()
                 }
-                 ?: let {
-                    setupLocationOverlay(enableFollowLocation = enableFollowLocation, requiredZoom = requiredZoom)
-                }
+                    ?: let {
+                        setupLocationOverlay(enableFollowLocation = enableFollowLocation, requiredZoom = requiredZoom)
+                    }
             } else {
                 disableLocationShowing(showLocationNotEnabled)
             }
@@ -539,7 +538,6 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun showRouteButtons(visible: Boolean) {
-
         if (visible) {
             mapViewModel.mapStateLiveData.value?.transportationMode.let { currentTransportationMode ->
                 setupTransportationIcon(currentTransportationMode)
@@ -552,26 +550,25 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun setupTransportationIcon(currentTransportationMode: String?) {
-        when(currentTransportationMode) {
-            OSRMRoadManager.MEAN_BY_FOOT ->  binding.carImageView.setImageResource(R.drawable.ic_foot)
-            OSRMRoadManager.MEAN_BY_BIKE ->  binding.carImageView.setImageResource(R.drawable.ic_bike)
-            OSRMRoadManager.MEAN_BY_CAR ->  binding.carImageView.setImageResource(R.drawable.ic_car)
-            else ->  throw IllegalStateException("Unknown transportation mode = $currentTransportationMode")
+        when (currentTransportationMode) {
+            OSRMRoadManager.MEAN_BY_FOOT -> binding.carImageView.setImageResource(R.drawable.ic_foot)
+            OSRMRoadManager.MEAN_BY_BIKE -> binding.carImageView.setImageResource(R.drawable.ic_bike)
+            OSRMRoadManager.MEAN_BY_CAR -> binding.carImageView.setImageResource(R.drawable.ic_car)
+            else -> throw IllegalStateException("Unknown transportation mode = $currentTransportationMode")
         }
     }
 
     private fun getTransportationName(): String {
         val transportationMode = mapViewModel.getTransportationMode()
-        return when(transportationMode) {
-            OSRMRoadManager.MEAN_BY_FOOT ->  getString(R.string.foot)
-            OSRMRoadManager.MEAN_BY_BIKE ->  getString(R.string.bike)
-            OSRMRoadManager.MEAN_BY_CAR ->  getString(R.string.car)
-            else ->  throw IllegalStateException("Unknown transportation mode = $transportationMode")
+        return when (transportationMode) {
+            OSRMRoadManager.MEAN_BY_FOOT -> getString(R.string.foot)
+            OSRMRoadManager.MEAN_BY_BIKE -> getString(R.string.bike)
+            OSRMRoadManager.MEAN_BY_CAR -> getString(R.string.car)
+            else -> throw IllegalStateException("Unknown transportation mode = $transportationMode")
         }
     }
 
     private fun buildRoute(marker: Marker, showSnackbar: Boolean) {
-
         if (locationOverlay == null) {
             setupLocationOverlay(enableFollowLocation = false, requiredZoom = null)
         }
@@ -651,4 +648,3 @@ class MapFragment : Fragment(), FragmentResultListener {
         }
     }
 }
-
