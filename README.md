@@ -9,7 +9,7 @@
 https://play.google.com/store/apps/details?id=ru.internetcloud.whereami
 
 <a href="https://play.google.com/store/apps/details?id=ru.internetcloud.whereami">
-<img src="/screenshots/GooglePlay.png" alt="Get it on Play Market" height="90"></a>
+<img src="/screenshots/GooglePlay.png" alt="Get it on Play Market" height="70"></a>
 
 Стек:
 - XML-разметка
