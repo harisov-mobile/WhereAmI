@@ -10,12 +10,12 @@ apply from: "../ktlint.gradle"
 
 android {
     namespace 'ru.internetcloud.whereami'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "ru.internetcloud.whereami"
         minSdk 21
-        targetSdk 33
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
