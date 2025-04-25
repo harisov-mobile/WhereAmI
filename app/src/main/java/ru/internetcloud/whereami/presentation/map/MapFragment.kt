@@ -6,18 +6,21 @@ import android.location.Geocoder
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.system.Os.bind
 import android.util.DisplayMetrics
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentResultListener
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import by.kirich1409.viewbindingdelegate.viewBinding
 import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
+import java.util.Locale
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,18 +40,14 @@ import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 import org.osmdroid.views.overlay.gestures.RotationGestureOverlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
-import ru.internetcloud.whereami.App
-import ru.internetcloud.whereami.BuildConfig
 import ru.internetcloud.whereami.R
 import ru.internetcloud.whereami.databinding.FragmentMapBinding
-import ru.internetcloud.whereami.di.ApplicationComponent
-import ru.internetcloud.whereami.di.ViewModelFactory
 import ru.internetcloud.whereami.domain.LocationPermissionRepository
 import ru.internetcloud.whereami.presentation.dialog.QuestionDialogFragment
-import java.util.Locale
-import javax.inject.Inject
+import ru.internetcloud.whereami.BuildConfig
 
-class MapFragment : Fragment(), FragmentResultListener {
+@AndroidEntryPoint
+class MapFragment : Fragment(R.layout.fragment_map), FragmentResultListener {
 
     interface OnMapEvents {
         fun onShowSettings()
@@ -56,23 +55,11 @@ class MapFragment : Fragment(), FragmentResultListener {
 
     var hostActivity: OnMapEvents? = null
 
-    @Inject
-    lateinit var viewModelFactory: ViewModelFactory
+    private val binding by viewBinding(FragmentMapBinding::bind)
 
-    @Inject
-    lateinit var transportationSwitcher: TransportationSwitcher
+    @Inject lateinit var transportationSwitcher: TransportationSwitcher
 
-    private val mapViewModel: MapViewModel by lazy {
-        ViewModelProvider(this, viewModelFactory).get(MapViewModel::class.java)
-    }
-
-    private val component: ApplicationComponent by lazy {
-        (requireActivity().application as App).component
-    }
-
-    private var _binding: FragmentMapBinding? = null
-    private val binding: FragmentMapBinding
-        get() = _binding!!
+    private val mapViewModel by viewModels<MapViewModel>()
 
     private var locationPermissionRepository: LocationPermissionRepository? = null
 
@@ -98,16 +85,6 @@ class MapFragment : Fragment(), FragmentResultListener {
         hostActivity = null
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        component.inject(this)
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        _binding = FragmentMapBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
 
@@ -122,8 +99,8 @@ class MapFragment : Fragment(), FragmentResultListener {
             mapViewModel.setEnableFollowLocation(currentLocationOverlay.isFollowLocationEnabled)
         }
 
-        locationOverlay = null // занулить, т.к. при возвращении из Settings-фрагмента не показывается
-        _binding = null
+        locationOverlay =
+            null // занулить, т.к. при возвращении из Settings-фрагмента не показывается
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -136,25 +113,29 @@ class MapFragment : Fragment(), FragmentResultListener {
 
     override fun onResume() {
         super.onResume()
-        // согласно документации https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
+        // согласно документации
+        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
         binding.mapview.onResume()
     }
 
     override fun onPause() {
         super.onPause()
-        // согласно документации https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
+        // согласно документации
+        // https://github.com/osmdroid/osmdroid/wiki/How-to-use-the-osmdroid-library-(Kotlin)
         binding.mapview.onPause()
     }
 
     private fun subscribeChildFragments() {
         // (диалоговое окно - "Открыть настройки?")
-        childFragmentManager.setFragmentResultListener(REQUEST_OPEN_SETTINGS_KEY, viewLifecycleOwner, this)
+        childFragmentManager.setFragmentResultListener(
+            REQUEST_OPEN_SETTINGS_KEY,
+            viewLifecycleOwner,
+            this,
+        )
     }
 
     private fun observeViewModel() {
-        mapViewModel.mapStateLiveData.observe(viewLifecycleOwner) { mapState ->
-            updateUI(mapState)
-        }
+        mapViewModel.mapStateLiveData.observe(viewLifecycleOwner) { mapState -> updateUI(mapState) }
     }
 
     private fun updateUI(mapState: MapState) {
@@ -162,36 +143,25 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun setupClickListeners() {
-        binding.locationFab.setOnClickListener {
-            moveToCurrentLocation()
-        }
+        binding.locationFab.setOnClickListener { moveToCurrentLocation() }
 
-        binding.zoomInFab.setOnClickListener {
-            binding.mapview.controller.zoomIn()
-        }
+        binding.zoomInFab.setOnClickListener { binding.mapview.controller.zoomIn() }
 
-        binding.zoomOutFab.setOnClickListener {
-            binding.mapview.controller.zoomOut()
-        }
+        binding.zoomOutFab.setOnClickListener { binding.mapview.controller.zoomOut() }
 
-        binding.settingsImageView.setOnClickListener {
-            hostActivity?.onShowSettings()
-        }
+        binding.settingsImageView.setOnClickListener { hostActivity?.onShowSettings() }
 
-        binding.routeImageView.setOnClickListener {
-            showRoute()
-        }
+        binding.routeImageView.setOnClickListener { showRoute() }
 
         binding.carImageView.setOnClickListener {
-            val transportationMode = transportationSwitcher.getNextTransportationMode(
-                mapViewModel.getTransportationMode()
-            )
+            val transportationMode =
+                transportationSwitcher.getNextTransportationMode(
+                    mapViewModel.getTransportationMode()
+                )
             mapViewModel.setTransportationMode(transportationMode)
             setupTransportationIcon(transportationMode)
 
-            mapViewModel.mapStateLiveData.value?.polyline?.let {
-                showRoute()
-            }
+            mapViewModel.mapStateLiveData.value?.polyline?.let { showRoute() }
         }
 
         binding.removeRouteImageView.setOnClickListener {
@@ -242,11 +212,7 @@ class MapFragment : Fragment(), FragmentResultListener {
                     // запустить экран, который приведет пользователя в настройки:
                     val settingsIntent = Intent()
                     settingsIntent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                    val myApplicaionUri = Uri.fromParts(
-                        "package",
-                        BuildConfig.APPLICATION_ID,
-                        null
-                    )
+                    val myApplicaionUri = Uri.fromParts("package", BuildConfig.APPLICATION_ID, null)
                     settingsIntent.data = myApplicaionUri
                     settingsIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     startActivity(settingsIntent)
@@ -256,25 +222,23 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun setupMarker(geoPoint: GeoPoint, markerTitle: String) {
-        val marker = Marker(binding.mapview).apply {
-            position = geoPoint
-            icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_marker)
-            title = markerTitle
-            setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
-            setOnMarkerClickListener { currentMarker, mapView ->
-                val snackBar = Snackbar.make(
-                    binding.root,
-                    markerTitle,
-                    Snackbar.LENGTH_INDEFINITE
-                )
-                snackBar.setAction("OK") {
-                    snackBar.dismiss()
-                } // если не исчезает - вызови dismiss()
-                snackBar.show()
+        val marker =
+            Marker(binding.mapview).apply {
+                position = geoPoint
+                icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_marker)
+                title = markerTitle
+                setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
+                setOnMarkerClickListener { currentMarker, mapView ->
+                    val snackBar =
+                        Snackbar.make(binding.root, markerTitle, Snackbar.LENGTH_INDEFINITE)
+                    snackBar.setAction("OK") {
+                        snackBar.dismiss()
+                    } // если не исчезает - вызови dismiss()
+                    snackBar.show()
 
-                true
+                    true
+                }
             }
-        }
         binding.mapview.overlays.add(marker)
         binding.mapview.invalidate()
         mapViewModel.setMarker(marker)
@@ -314,7 +278,8 @@ class MapFragment : Fragment(), FragmentResultListener {
 
     private fun setCompas() {
         // Компас
-        val compassOverlay = CompassOverlay(context, InternalCompassOrientationProvider(context), binding.mapview)
+        val compassOverlay =
+            CompassOverlay(context, InternalCompassOrientationProvider(context), binding.mapview)
         compassOverlay.enableCompass()
         binding.mapview.overlays.add(compassOverlay)
     }
@@ -324,59 +289,58 @@ class MapFragment : Fragment(), FragmentResultListener {
         val dm: DisplayMetrics = requireActivity().resources.displayMetrics
         val scaleBarOverlay = ScaleBarOverlay(binding.mapview)
         scaleBarOverlay.setCentred(true)
-        // play around with these values to get the location on screen in the right place for your application
+        // play around with these values to get the location on screen in the right place for your
+        // application
         scaleBarOverlay.setScaleBarOffset(dm.widthPixels / 2, 10)
         binding.mapview.overlays.add(scaleBarOverlay)
     }
 
     private fun setMapClickListener(mapState: MapState) {
         // Нажатия на карту:
-        val mapEventsReceiver = object : MapEventsReceiver {
-            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                mapState.polyline?.let { currentPolyline ->
-                    // если уже есть какой-то маршрут, то я его удаляю:
-                    binding.mapview.overlays.remove(currentPolyline)
-                    mapViewModel.setPolyline(null)
-                    mapViewModel.setRouteStartPoint(null)
-                }
-
-                mapState.marker?.let { currentMarker ->
-                    // если уже есть какой-то маркер, то я его удаляю:
-                    binding.mapview.overlays.remove(currentMarker)
-                    mapViewModel.setMarker(null)
-                }
-
-                p?.let { geoPoint ->
-                    var markerTitle = "Нет данных"
-                    try {
-                        val addressList = Geocoder(requireContext(), Locale.getDefault())
-                            .getFromLocation(geoPoint.latitude, geoPoint.longitude, 1)
-                        addressList?.let { currentAddressList ->
-                            if (currentAddressList.size > 0) {
-                                markerTitle = currentAddressList.get(0).getAddressLine(0)
-                            }
-                        }
-                    } catch (E: Exception) {
+        val mapEventsReceiver =
+            object : MapEventsReceiver {
+                override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                    mapState.polyline?.let { currentPolyline ->
+                        // если уже есть какой-то маршрут, то я его удаляю:
+                        binding.mapview.overlays.remove(currentPolyline)
+                        mapViewModel.setPolyline(null)
+                        mapViewModel.setRouteStartPoint(null)
                     }
-                    setupMarker(geoPoint, markerTitle)
-                    val snackBar = Snackbar.make(
-                        binding.root,
-                        markerTitle,
-                        Snackbar.LENGTH_INDEFINITE
-                    )
-                    snackBar.setAction("OK") {
-                        snackBar.dismiss()
-                    } // если не исчезает - вызови dismiss()
-                    snackBar.show()
-                }
-                return true
-            }
 
-            override fun longPressHelper(p: GeoPoint?): Boolean {
-                // длинные нажатия не обрабатываю
-                return true
+                    mapState.marker?.let { currentMarker ->
+                        // если уже есть какой-то маркер, то я его удаляю:
+                        binding.mapview.overlays.remove(currentMarker)
+                        mapViewModel.setMarker(null)
+                    }
+
+                    p?.let { geoPoint ->
+                        var markerTitle = "Нет данных"
+                        try {
+                            val addressList =
+                                Geocoder(requireContext(), Locale.getDefault())
+                                    .getFromLocation(geoPoint.latitude, geoPoint.longitude, 1)
+                            addressList?.let { currentAddressList ->
+                                if (currentAddressList.size > 0) {
+                                    markerTitle = currentAddressList.get(0).getAddressLine(0)
+                                }
+                            }
+                        } catch (E: Exception) {}
+                        setupMarker(geoPoint, markerTitle)
+                        val snackBar =
+                            Snackbar.make(binding.root, markerTitle, Snackbar.LENGTH_INDEFINITE)
+                        snackBar.setAction("OK") {
+                            snackBar.dismiss()
+                        } // если не исчезает - вызови dismiss()
+                        snackBar.show()
+                    }
+                    return true
+                }
+
+                override fun longPressHelper(p: GeoPoint?): Boolean {
+                    // длинные нажатия не обрабатываю
+                    return true
+                }
             }
-        }
         val mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
         binding.mapview.overlays.add(mapEventsOverlay)
     }
@@ -391,7 +355,7 @@ class MapFragment : Fragment(), FragmentResultListener {
                     showCurrentLocation(
                         enableFollowLocation = true,
                         showLocationNotEnabled = true,
-                        ZOOM_LEVEL
+                        ZOOM_LEVEL,
                     ) // в первый раз чтобы масштаб крупный был
                 } else {
                     currentLocationPermissionRepository.requestLocationPermission {
@@ -401,7 +365,7 @@ class MapFragment : Fragment(), FragmentResultListener {
                         showCurrentLocation(
                             enableFollowLocation = true,
                             showLocationNotEnabled = true,
-                            ZOOM_LEVEL
+                            ZOOM_LEVEL,
                         ) // в первый раз чтобы масштаб крупный был
                     }
                 }
@@ -409,11 +373,13 @@ class MapFragment : Fragment(), FragmentResultListener {
         } else {
             locationPermissionRepository?.let { currentLocationPermissionRepository ->
                 if (currentLocationPermissionRepository.isLocationPermissionGranted()) {
-                    val enableFollowLocation = mapViewModel.mapStateLiveData.value?.enableFollowLocation ?: false
-                    val showLocationNotEnabled = mapViewModel.mapStateLiveData.value?.showLocationNotEnabled ?: false
+                    val enableFollowLocation =
+                        mapViewModel.mapStateLiveData.value?.enableFollowLocation ?: false
+                    val showLocationNotEnabled =
+                        mapViewModel.mapStateLiveData.value?.showLocationNotEnabled ?: false
                     showCurrentLocation(
                         enableFollowLocation = enableFollowLocation,
-                        showLocationNotEnabled = showLocationNotEnabled
+                        showLocationNotEnabled = showLocationNotEnabled,
                     )
                 }
             }
@@ -423,17 +389,18 @@ class MapFragment : Fragment(), FragmentResultListener {
     private fun showCurrentLocation(
         enableFollowLocation: Boolean,
         showLocationNotEnabled: Boolean,
-        requiredZoom: Double? = null
+        requiredZoom: Double? = null,
     ) {
         locationPermissionRepository?.let { currentLocationPermissionRepository ->
             if (currentLocationPermissionRepository.isLocationEnabled()) {
                 locationOverlay?.let { currentLocationOverlay ->
                     if (currentLocationOverlay.myLocation == null) {
-                        val snackBar = Snackbar.make(
-                            binding.root,
-                            R.string.location_is_not_available_yet,
-                            Snackbar.LENGTH_SHORT
-                        )
+                        val snackBar =
+                            Snackbar.make(
+                                binding.root,
+                                R.string.location_is_not_available_yet,
+                                Snackbar.LENGTH_SHORT,
+                            )
                         snackBar.setAction("OK") {
                             snackBar.dismiss()
                         } // если не исчезает - вызови dismiss()
@@ -443,7 +410,10 @@ class MapFragment : Fragment(), FragmentResultListener {
                     currentLocationOverlay.enableFollowLocation()
                 }
                     ?: let {
-                        setupLocationOverlay(enableFollowLocation = enableFollowLocation, requiredZoom = requiredZoom)
+                        setupLocationOverlay(
+                            enableFollowLocation = enableFollowLocation,
+                            requiredZoom = requiredZoom,
+                        )
                     }
             } else {
                 disableLocationShowing(showLocationNotEnabled)
@@ -463,16 +433,16 @@ class MapFragment : Fragment(), FragmentResultListener {
             MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), binding.mapview).apply {
                 this.enableMyLocation()
                 this.setPersonIcon(bitmapIcon)
-                this.setDirectionIcon(bitmapIcon) // замена белой стрелки на человечка желтого с красной каемочкой
+                this.setDirectionIcon(
+                    bitmapIcon
+                ) // замена белой стрелки на человечка желтого с красной каемочкой
 
                 if (enableFollowLocation) {
                     this.enableFollowLocation()
                 }
             }
 
-        requiredZoom?.let { zoom ->
-            binding.mapview.controller.setZoom(zoom)
-        }
+        requiredZoom?.let { zoom -> binding.mapview.controller.setZoom(zoom) }
 
         binding.mapview.overlays.add(locationOverlay)
     }
@@ -487,14 +457,13 @@ class MapFragment : Fragment(), FragmentResultListener {
         mapViewModel.setEnableFollowLocation(false)
 
         if (showLocationNotEnabled) {
-            val snackBar = Snackbar.make(
-                binding.root,
-                R.string.location_is_not_enabled,
-                Snackbar.LENGTH_INDEFINITE
-            )
-            snackBar.setAction("OK") {
-                snackBar.dismiss()
-            } // если не исчезает - вызови dismiss()
+            val snackBar =
+                Snackbar.make(
+                    binding.root,
+                    R.string.location_is_not_enabled,
+                    Snackbar.LENGTH_INDEFINITE,
+                )
+            snackBar.setAction("OK") { snackBar.dismiss() } // если не исчезает - вызови dismiss()
             snackBar.show()
             mapViewModel.setShowLocationNotEnabled(false)
         } else {
@@ -510,11 +479,10 @@ class MapFragment : Fragment(), FragmentResultListener {
                 showCurrentLocation(enableFollowLocation = true, showLocationNotEnabled = true)
             } else {
                 // открываю диалог с предложением открыть настройки приложения
-                QuestionDialogFragment
-                    .newInstance(
+                QuestionDialogFragment.newInstance(
                         getString(R.string.offer_to_open_settings),
                         REQUEST_OPEN_SETTINGS_KEY,
-                        ARG_ANSWER
+                        ARG_ANSWER,
                     )
                     .show(childFragmentManager, REQUEST_OPEN_SETTINGS_KEY)
             }
@@ -522,11 +490,8 @@ class MapFragment : Fragment(), FragmentResultListener {
     }
 
     private fun showMarker(currentMarker: Marker?) {
-        currentMarker?.let {
-            setupMarker(it.position, it.title)
-        } ?: let {
-            showRouteButtons(visible = false)
-        }
+        currentMarker?.let { setupMarker(it.position, it.title) }
+            ?: let { showRouteButtons(visible = false) }
     }
 
     private fun showPolyline(currentPolyline: Polyline?) {
@@ -539,7 +504,8 @@ class MapFragment : Fragment(), FragmentResultListener {
 
     private fun showRouteButtons(visible: Boolean) {
         if (visible) {
-            mapViewModel.mapStateLiveData.value?.transportationMode.let { currentTransportationMode ->
+            mapViewModel.mapStateLiveData.value?.transportationMode.let { currentTransportationMode
+                ->
                 setupTransportationIcon(currentTransportationMode)
             }
         }
@@ -551,10 +517,15 @@ class MapFragment : Fragment(), FragmentResultListener {
 
     private fun setupTransportationIcon(currentTransportationMode: String?) {
         when (currentTransportationMode) {
-            OSRMRoadManager.MEAN_BY_FOOT -> binding.carImageView.setImageResource(R.drawable.ic_foot)
-            OSRMRoadManager.MEAN_BY_BIKE -> binding.carImageView.setImageResource(R.drawable.ic_bike)
+            OSRMRoadManager.MEAN_BY_FOOT ->
+                binding.carImageView.setImageResource(R.drawable.ic_foot)
+            OSRMRoadManager.MEAN_BY_BIKE ->
+                binding.carImageView.setImageResource(R.drawable.ic_bike)
             OSRMRoadManager.MEAN_BY_CAR -> binding.carImageView.setImageResource(R.drawable.ic_car)
-            else -> throw IllegalStateException("Unknown transportation mode = $currentTransportationMode")
+            else ->
+                throw IllegalStateException(
+                    "Unknown transportation mode = $currentTransportationMode"
+                )
         }
     }
 
@@ -576,15 +547,19 @@ class MapFragment : Fragment(), FragmentResultListener {
         locationOverlay?.let { currentLocationOverlay ->
             lifecycleScope.launch(Dispatchers.IO) {
                 val endPoint: GeoPoint = marker.position
-                val roadManager = OSRMRoadManager(requireContext(), System.getProperty("http.agent"))
-                roadManager.setMean(mapViewModel.getTransportationMode()) // м.б. MEAN_BY_CAR и на мотоцикле
+                val roadManager =
+                    OSRMRoadManager(requireContext(), System.getProperty("http.agent"))
+                roadManager.setMean(
+                    mapViewModel.getTransportationMode()
+                ) // м.б. MEAN_BY_CAR и на мотоцикле
 
-                val startLocation = if (currentLocationOverlay.myLocation == null) {
-                    mapViewModel.mapStateLiveData.value?.routeStartPoint
-                } else {
-                    mapViewModel.setRouteStartPoint(currentLocationOverlay.myLocation)
-                    currentLocationOverlay.myLocation
-                }
+                val startLocation =
+                    if (currentLocationOverlay.myLocation == null) {
+                        mapViewModel.mapStateLiveData.value?.routeStartPoint
+                    } else {
+                        mapViewModel.setRouteStartPoint(currentLocationOverlay.myLocation)
+                        currentLocationOverlay.myLocation
+                    }
 
                 startLocation?.let {
                     val wayPoints = arrayListOf<GeoPoint>(startLocation, endPoint)
@@ -598,52 +573,53 @@ class MapFragment : Fragment(), FragmentResultListener {
 
                         if (showSnackbar) {
                             val durationMinutes: Int = (route.mDuration / 60).toInt()
-                            val durationSeconds: Int = route.mDuration.toInt() - durationMinutes * 60
+                            val durationSeconds: Int =
+                                route.mDuration.toInt() - durationMinutes * 60
                             val length: Int = (route.mLength * 1000).toInt()
                             val transportationName = getTransportationName()
 
-                            val routeText = if (durationMinutes > DURATION_MIN) {
-                                String.format(
-                                    getString(R.string.route_text),
-                                    transportationName,
-                                    length.toString(),
-                                    durationMinutes.toString()
-                                )
-                            } else {
-                                String.format(
-                                    getString(R.string.route_text_sec),
-                                    transportationName,
-                                    length.toString(),
-                                    durationMinutes.toString(),
-                                    durationSeconds.toString()
-                                )
-                            }
+                            val routeText =
+                                if (durationMinutes > DURATION_MIN) {
+                                    String.format(
+                                        getString(R.string.route_text),
+                                        transportationName,
+                                        length.toString(),
+                                        durationMinutes.toString(),
+                                    )
+                                } else {
+                                    String.format(
+                                        getString(R.string.route_text_sec),
+                                        transportationName,
+                                        length.toString(),
+                                        durationMinutes.toString(),
+                                        durationSeconds.toString(),
+                                    )
+                                }
 
-                            val snackBar = Snackbar.make(
-                                binding.root,
-                                routeText,
-                                Snackbar.LENGTH_INDEFINITE
-                            )
+                            val snackBar =
+                                Snackbar.make(binding.root, routeText, Snackbar.LENGTH_INDEFINITE)
                             snackBar.setAction("OK") {
                                 snackBar.dismiss()
                             } // если не исчезает - вызови dismiss()
                             snackBar.show()
                         }
                     }
-                } ?: let {
-                    if (showSnackbar) {
-                        val snackBar = Snackbar.make(
-                            binding.root,
-                            R.string.location_is_not_available_yet,
-                            Snackbar.LENGTH_SHORT
-                        )
-                        snackBar.setAction("OK") {
-                            snackBar.dismiss()
-                        } // если не исчезает - вызови dismiss()
-                        snackBar.show()
-                        binding.mapview.invalidate()
-                    }
                 }
+                    ?: let {
+                        if (showSnackbar) {
+                            val snackBar =
+                                Snackbar.make(
+                                    binding.root,
+                                    R.string.location_is_not_available_yet,
+                                    Snackbar.LENGTH_SHORT,
+                                )
+                            snackBar.setAction("OK") {
+                                snackBar.dismiss()
+                            } // если не исчезает - вызови dismiss()
+                            snackBar.show()
+                            binding.mapview.invalidate()
+                        }
+                    }
             }
         }
     }

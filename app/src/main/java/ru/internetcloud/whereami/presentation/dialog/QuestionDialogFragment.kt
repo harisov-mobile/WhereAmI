@@ -9,28 +9,6 @@ import ru.internetcloud.whereami.R
 
 class QuestionDialogFragment : DialogFragment() {
 
-    companion object {
-
-        private const val QUESTION_ARG = "question_arg"
-        private const val PARENT_REQUEST_KEY = "parent_request_key"
-        private const val PARENT_ANSWER_ARG_NAME = "parent_answer_arg_name"
-
-        fun newInstance(
-            question: String,
-            parentRequestKey: String,
-            parentAnswerArgName: String
-        ): QuestionDialogFragment {
-            val args = Bundle().apply {
-                putString(QUESTION_ARG, question)
-                putString(PARENT_REQUEST_KEY, parentRequestKey)
-                putString(PARENT_ANSWER_ARG_NAME, parentAnswerArgName)
-            }
-            return QuestionDialogFragment().apply {
-                arguments = args
-            }
-        }
-    }
-
     private var question: String = ""
     private var requestKey = ""
     private var answerArgName = ""
@@ -40,9 +18,7 @@ class QuestionDialogFragment : DialogFragment() {
             question = arg.getString(QUESTION_ARG, "")
             requestKey = arg.getString(PARENT_REQUEST_KEY, "")
             answerArgName = arg.getString(PARENT_ANSWER_ARG_NAME, "")
-        } ?: run {
-            throw RuntimeException("There are not arguments in QuestionDialogFragment")
-        }
+        } ?: run { throw RuntimeException("There are not arguments in QuestionDialogFragment") }
 
         val alertDialogBuilder = AlertDialog.Builder(activity)
         alertDialogBuilder.setMessage(question)
@@ -58,9 +34,28 @@ class QuestionDialogFragment : DialogFragment() {
     }
 
     private fun sendResultToFragment(result: Boolean) {
-        val bundle = Bundle().apply {
-            putBoolean(answerArgName, result)
-        }
+        val bundle = Bundle().apply { putBoolean(answerArgName, result) }
         setFragmentResult(requestKey, bundle)
+    }
+
+    companion object {
+
+        private const val QUESTION_ARG = "question_arg"
+        private const val PARENT_REQUEST_KEY = "parent_request_key"
+        private const val PARENT_ANSWER_ARG_NAME = "parent_answer_arg_name"
+
+        fun newInstance(
+            question: String,
+            parentRequestKey: String,
+            parentAnswerArgName: String,
+        ): QuestionDialogFragment {
+            val args =
+                Bundle().apply {
+                    putString(QUESTION_ARG, question)
+                    putString(PARENT_REQUEST_KEY, parentRequestKey)
+                    putString(PARENT_ANSWER_ARG_NAME, parentAnswerArgName)
+                }
+            return QuestionDialogFragment().apply { arguments = args }
+        }
     }
 }
